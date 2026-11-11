@@ -5,7 +5,8 @@ import { ExternalLink, FileText, Trash2 } from 'lucide-react';
 import { useStore, act, EMPTY } from '../store';
 import { api, q } from '../api';
 import { Code } from './Code';
-import { Switch } from './ui';
+import { Modal, Switch } from './ui';
+import { Media } from './LeftPanel';
 import { useDark } from './Inspector';
 
 export function ContentEditor() {
@@ -16,6 +17,7 @@ export function ContentEditor() {
   const dark = useDark();
   const [entry, setEntry] = useState<any>(null);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'dirty'>('saved');
+  const [picking, setPicking] = useState<string | null>(null);
   const timer = useRef<any>(null);
   const latest = useRef<any>(null);
 
@@ -123,6 +125,18 @@ export function ContentEditor() {
           <Trash2 size={15} />
         </button>
       </div>
+      {picking && (
+        <Modal title="Choose an image" onClose={() => setPicking(null)}>
+          <div style={{ overflowY: 'auto', paddingBottom: 10 }}>
+            <Media
+              onPick={(m) => {
+                setField(picking, m.url);
+                setPicking(null);
+              }}
+            />
+          </div>
+        </Modal>
+      )}
       <div className="content-main">
         <div className="fm">
           <div className="sub" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>Fields</div>
@@ -146,6 +160,11 @@ export function ContentEditor() {
                   <div className="inp">
                     <input type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'} value={v ?? ''} onChange={(e) => setField(f.name, f.type === 'number' ? Number(e.target.value) : e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
                   </div>
+                )}
+                {f.type === 'image' && (
+                  <button className="btn sm ghost" style={{ justifySelf: 'start' }} onClick={() => setPicking(f.name)}>
+                    Choose an image
+                  </button>
                 )}
                 {f.type === 'image' && v && <img src={(devUrl || '') + v} alt="" style={{ width: '100%', aspectRatio: '2/1', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />}
               </div>

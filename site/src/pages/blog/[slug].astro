@@ -6,6 +6,7 @@ import Layout from '../../layouts/Layout.astro';
 import Breadcrumbs from '../../components/navigation/Breadcrumbs.astro';
 import ShareLinks from '../../components/navigation/ShareLinks.astro';
 import TableOfContents from '../../components/blog/TableOfContents.astro';
+import SmartImage from '../../components/media/SmartImage.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
@@ -29,7 +30,7 @@ const date = post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', mo
     {
       post.data.heroImage && (
         <div class="mx-auto mt-12 max-w-5xl px-6">
-          <img src={post.data.heroImage} alt="" class="aspect-[2/1] w-full rounded-card object-cover" />
+          <SmartImage src={post.data.heroImage} priority alt="" class="aspect-[2/1] w-full rounded-card object-cover" />
         </div>
       )
     }

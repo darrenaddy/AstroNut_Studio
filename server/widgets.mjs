@@ -253,7 +253,7 @@ export function parseFields(src) {
     else if (typeof def === 'boolean' || /^boolean$/.test(declared)) type = 'toggle';
     else if (union) type = 'choice';
     else if (typeof def === 'number' || /^number$/.test(declared)) type = 'number';
-    else if (usage[name] === 'image') type = 'image';
+    else if (usage[name] === 'image' || /^(src|image|photo|picture|avatar|logo|heroImage|cover)$/.test(name)) type = 'image';
     else if (usage[name] === 'link') type = 'link';
     else if (typeof def === 'string' && (def.length > 90 || def.includes('\n'))) type = 'longtext';
     else type = 'text';

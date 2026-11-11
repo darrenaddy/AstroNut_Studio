@@ -20,6 +20,8 @@ export const FORM_PRESETS = {
 };
 
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.ico']);
+const RASTER_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.tiff']);
+const SMART_IMAGE = 'src/components/media/SmartImage.astro';
 const MEDIA_EXT = new Set([...IMAGE_EXT, '.mp4', '.webm', '.mp3', '.pdf', '.woff2']);
 
 const toPosix = (p) => p.split(path.sep).join('/');
@@ -260,10 +262,14 @@ export class Project {
     return { components: map('src/components', 'component'), layouts: map('src/layouts', 'layout') };
   }
   media() {
-    return this.walk('public', (n) => MEDIA_EXT.has(path.extname(n).toLowerCase())).map((file) => {
+    const item = (file, url, optimised) => {
       const st = fs.statSync(this.abs(file));
-      return { file, url: '/' + file.replace(/^public\//, ''), name: path.basename(file), size: st.size, image: IMAGE_EXT.has(path.extname(file).toLowerCase()), mtime: st.mtimeMs };
-    });
+      return { file, url, name: path.basename(file), size: st.size, image: IMAGE_EXT.has(path.extname(file).toLowerCase()), optimised, mtime: st.mtimeMs };
+    };
+    // Photos in src/assets are resized by Astro at build time; files in public/ are served as they are.
+    const assets = this.walk('src/assets', (n) => RASTER_EXT.has(path.extname(n).toLowerCase()) || /\.svg$/i.test(n)).map((file) => item(file, '/' + file, RASTER_EXT.has(path.extname(file).toLowerCase())));
+    const pub = this.walk('public', (n) => MEDIA_EXT.has(path.extname(n).toLowerCase())).map((file) => item(file, '/' + file.replace(/^public\//, ''), false));
+    return [...assets.sort((a, b) => b.mtime - a.mtime), ...pub];
   }
 
   // ---- theme tokens ------------------------------------------------------
@@ -463,6 +469,24 @@ export class Project {
     }
   }
 
+  /** When a field (or list) is given a photo from src/assets, make the widget show it through SmartImage. */
+  smartenSource(file, src, field, value) {
+    const uses = (v) => typeof v === 'string' && v.startsWith('/src/assets/');
+    if (field.type === 'list') {
+      const keys = field.itemFields.filter((k) => k.type === 'image' && (value || []).some((it) => uses(it[k.name]))).map((k) => k.name);
+      if (!keys.length || !field.param) return src;
+      return this.smarten(file, src, (n) => n.attrs.some((a) => a.name === 'src' && a.kind === 'expr' && keys.some((k) => String(a.value).trim() === `${field.param}.${k}`)));
+    }
+    if (field.type !== 'image' || !uses(value)) return src;
+    return this.smarten(file, src, (n) => n.attrs.some((a) => a.name === 'src' && ((a.kind === 'expr' && String(a.value).trim() === field.name) || (a.kind === 'shorthand' && a.name === field.name))));
+  }
+  smartenFor(compFile, field, value, extra) {
+    if (!compFile) return;
+    const before = this.read(compFile);
+    const after = this.smartenSource(compFile, before, field, value);
+    if (after !== before) extra.push({ file: compFile, content: after });
+  }
+
   /** The fields of a component file with their defaults (for editing a widget's defaults). */
   fieldsOf(file) {
     return W.parseFields(this.read(file)).fields;
@@ -487,6 +511,53 @@ export class Project {
     }
     if (!node) throw httpError(409, 'Couldn’t tell which copy of this widget you mean. Select it in the Layers list instead.');
     return { file: page, start: node.start, loc: node.loc, name: node.name, type: 'component' };
+  }
+
+  /** Make sure the project has the SmartImage component (it is what lets Astro optimise a photo given just its path). */
+  ensureSmartImage() {
+    if (!this.exists(SMART_IMAGE)) this.write(SMART_IMAGE, fs.readFileSync(path.join(TEMPLATES, 'SmartImage.astro'), 'utf8'));
+    return SMART_IMAGE;
+  }
+
+  /**
+   * Swap plain <img> tags for <SmartImage> in a file, so a photo from src/assets is
+   * optimised rather than broken. `match(node, doc)` picks which <img> tags.
+   * Returns the new source (unchanged when nothing matched).
+   */
+  smarten(file, src, match) {
+    let doc = A.parse(src);
+    const targets = doc.all.filter((n) => n.type === 'element' && n.name === 'img' && match(n, doc));
+    if (!targets.length) return src;
+    this.ensureSmartImage();
+    const { name, needsImport, source } = this.importNameFor(file, doc, SMART_IMAGE);
+    let out = src;
+    for (const n of targets.sort((a, b) => b.start - a.start)) {
+      const close = out.slice(n.openEnd - 2, n.openEnd) === '/>' ? '' : ' /';
+      out = out.slice(0, n.openEnd - (close ? 1 : 2)) + (close ? ' />' : '/>') + out.slice(n.openEnd);
+      out = out.slice(0, n.start + 1) + name + out.slice(n.start + 4);
+    }
+    if (needsImport) out = A.addImport(A.parse(out), name, source).src;
+    return out;
+  }
+
+  /** From a rendered image, find the <SmartImage> tag it came from: the nth one inside its parent element. */
+  imagePlacement({ file, loc, index = 0 }) {
+    const doc = this.doc(file);
+    const parent = doc.findByLoc(loc);
+    if (!parent) throw httpError(409, 'Couldn’t find that image in the source.');
+    const imports = this.componentMap(file, doc);
+    const inside = (n) => {
+      const out = [];
+      for (const c of n.children) {
+        if (c.type === 'component' && imports[c.name.split('.')[0]] === SMART_IMAGE) out.push(c);
+        else if (c.type !== 'element') out.push(...inside(c));
+      }
+      return out;
+    };
+    const list = inside(parent);
+    const node = list[index] || list[0];
+    if (!node) throw httpError(409, 'Couldn’t find that image in the source.');
+    return { file, start: node.start, loc: node.loc, name: node.name, type: 'component' };
   }
 
   /** Copy a component so one page can have its own independent version. Returns the new file. */
@@ -550,6 +621,7 @@ export class Project {
         const field = compFile && W.parseFields(this.read(compFile)).fields.find((f) => f.name === o.name);
         if (!field || field.type === 'code') throw httpError(400, `“${o.name}” isn’t an editable field of ${target.name}.`);
         res = { src: W.setFieldValue(src, target, field, o.value), at: target.start };
+        this.smartenFor(compFile, field, o.value, extra);
         label = o.value == null ? `Reset ${field.label.toLowerCase()}` : `Edit ${field.label.toLowerCase()}`;
         break;
       }
@@ -564,11 +636,17 @@ export class Project {
         if (!list[o.index]) throw httpError(409, 'That item no longer exists.');
         list[o.index][o.key] = o.value;
         res = target ? { src: W.setFieldValue(src, target, field, list), at: target.start } : { src: W.setFieldDefault(src, o.name, list), at: null };
+        if (target) this.smartenFor(compFile, field, list, extra);
+        else res.src = this.smartenSource(file, res.src, field, list);
         label = `Edit ${field.label.toLowerCase()}`;
         break;
       }
       case 'setDefault': {
         res = { src: W.setFieldDefault(src, o.name, o.value), at: null };
+        {
+          const field = W.parseFields(src).fields.find((f) => f.name === o.name);
+          if (field) res.src = this.smartenSource(file, res.src, field, o.value);
+        }
         label = `Edit default ${o.name}`;
         break;
       }
@@ -601,6 +679,19 @@ export class Project {
         const d2 = A.parse(to.out);
         const node = d2.all.find((x) => x.type === 'component' && x.name === to.newName);
         return { ok: true, copy: to.copy, select: node ? { file, start: node.start, loc: node.loc, name: node.name, type: 'component' } : null };
+      }
+      case 'setImage': {
+        // Give an <img> element a new picture. A photo from src/assets turns it into a SmartImage so Astro optimises it.
+        const value = String(o.value || '');
+        if (target.type === 'element' && target.name === 'img' && value.startsWith('/src/assets/')) {
+          const withSrc = A.setAttr(doc, target, 'src', value).src;
+          res = { src: this.smarten(file, withSrc, (n) => n.start === target.start), at: null };
+          const d2 = A.parse(res.src);
+          const node = d2.all.find((n) => n.type === 'component' && n.attrs.some((a) => a.name === 'src' && a.value === value) && n.line >= target.line - 1);
+          res.at = node ? node.start : null;
+        } else res = A.setAttr(doc, target, 'src', value);
+        label = 'Change image';
+        break;
       }
       case 'setAttr': {
         res = A.setAttr(doc, target, o.name, o.value);
@@ -688,6 +779,7 @@ export class Project {
         let workDoc = doc;
         let shift = 0;
         if (o.component) {
+          if (o.component === SMART_IMAGE) this.ensureSmartImage();
           let componentFile = o.component;
           if (o.copy) {
             // "Copy for this page": duplicate the file first, then place the copy.
@@ -701,7 +793,7 @@ export class Project {
             extra.push({ file: componentFile, content: this.read(o.component) });
           }
           const { name, needsImport, source } = this.importNameFor(file, doc, componentFile);
-          snippet = o.withSlot ? `<${name}>\n  <p>Content</p>\n</${name}>` : `<${name} />`;
+          snippet = o.withSlot ? `<${name}>\n  <p>Content</p>\n</${name}>` : `<${name}${o.attrs ? ' ' + o.attrs : ''} />`;
           if (needsImport) {
             const r = A.addImport(doc, name, source);
             shift = r.delta;
@@ -804,18 +896,20 @@ export class Project {
   }
 
   // ---- media -------------------------------------------------------------
-  async saveMedia(name, buffer) {
+  async saveMedia(name, buffer, keepOriginal = false) {
     const ext = path.extname(name).toLowerCase();
     if (!MEDIA_EXT.has(ext)) throw httpError(400, `Unsupported file type: ${ext || 'unknown'}`);
     const base = path.basename(name, path.extname(name)).toLowerCase().replace(/[^a-z0-9\-_]+/g, '-').replace(/^-+|-+$/g, '') || 'file';
-    let rel = `public/media/${base}${ext}`;
-    for (let k = 2; this.exists(rel); k++) rel = `public/media/${base}-${k}${ext}`;
+    // Photos go where Astro can optimise them; everything else is served as it is.
+    const dir = RASTER_EXT.has(ext) && !keepOriginal ? 'src/assets' : 'public/media';
+    let rel = `${dir}/${base}${ext}`;
+    for (let k = 2; this.exists(rel); k++) rel = `${dir}/${base}-${k}${ext}`;
     await fsp.mkdir(path.dirname(this.abs(rel)), { recursive: true });
     await fsp.writeFile(this.abs(rel), buffer);
-    return { file: rel, url: '/' + rel.replace(/^public\//, '') };
+    return { file: rel, url: rel.startsWith('public/') ? '/' + rel.replace(/^public\//, '') : '/' + rel, optimised: rel.startsWith('src/assets/') };
   }
   deleteMedia(file) {
-    if (!file.startsWith('public/')) throw httpError(400, 'Not a media file');
+    if (!file.startsWith('public/') && !file.startsWith('src/assets/')) throw httpError(400, 'Not a media file');
     fs.rmSync(this.abs(file), { force: true });
   }
 

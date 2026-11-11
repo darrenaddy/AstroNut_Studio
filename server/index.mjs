@@ -80,6 +80,7 @@ api.get('/outline', wrap((req) => project.outline(String(req.query.file))));
 api.post('/node', wrap((req) => project.nodeInfo(req.body.file, req.body.ref)));
 api.post('/op', wrap((req) => project.op(req.body)));
 api.post('/placement', wrap((req) => project.placementFor(req.body)));
+api.post('/image-placement', wrap((req) => project.imagePlacement(req.body)));
 api.get('/fields', wrap((req) => ({ fields: project.fieldsOf(String(req.query.file)) })));
 api.post('/undo', wrap(() => {
   const step = project.undo();
@@ -110,7 +111,7 @@ api.post('/forms', wrap((req) => project.createForm(req.body)));
 api.get('/forms/presets', wrap(() => Object.entries(FORM_PRESETS).map(([value, p]) => ({ value, label: p.label }))));
 
 // ---- media -------------------------------------------------------------------
-api.post('/media', express.raw({ type: () => true, limit: '60mb' }), wrap((req) => project.saveMedia(decodeURIComponent(String(req.query.name || 'upload')), req.body)));
+api.post('/media', express.raw({ type: () => true, limit: '60mb' }), wrap((req) => project.saveMedia(decodeURIComponent(String(req.query.name || 'upload')), req.body, req.query.keep === '1')));
 api.delete('/media', wrap((req) => project.deleteMedia(String(req.query.file))));
 
 // ---- fonts (declared in astro.config, downloaded and self-hosted by Astro) -----------

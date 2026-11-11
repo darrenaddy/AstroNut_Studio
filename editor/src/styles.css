@@ -461,3 +461,5 @@ button.pagechip:hover { background: var(--active); color: var(--fg); }
 .fontopt .meta { display: grid; gap: 1px; min-width: 0; }
 .fontopt .meta b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fontopt .sample { font-size: 24px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity .2s; }
+
+.media-item .opt { position: absolute; left: 3px; bottom: 3px; width: 15px; height: 15px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 10px; line-height: 15px; text-align: center; font-weight: 700; }

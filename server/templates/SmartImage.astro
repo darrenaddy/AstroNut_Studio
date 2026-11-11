@@ -1,0 +1,37 @@
+---
+// SmartImage — shows an image the fastest way it can.
+// Photos kept in src/assets are resized into several widths and a modern format
+// by Astro when the site is built, and each visitor's browser downloads the one
+// that suits its screen. SVGs, files in public/ and web addresses are shown as they are.
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  /** The image: a photo in src/assets, a file in public/ (a path starting with /), or a full web address. */
+  src: string;
+  /** Describe the image for people who can't see it. Leave empty if it is purely decorative. */
+  alt?: string;
+  /** How it sizes itself. "constrained" shrinks to fit but never grows past its own size; "full-width" always fills its container; "fixed" stays one size. */
+  layout?: 'constrained' | 'full-width' | 'fixed';
+  /** Load this image first. Turn on only for the main image at the top of a page. */
+  priority?: boolean;
+  /** Advanced: how wide the image appears at each screen size, for example "(min-width: 1024px) 33vw, 100vw". */
+  sizes?: string;
+  class?: string;
+  [attribute: string]: any;
+}
+const { src, alt = "", layout = "constrained", priority = false, sizes = "", class: className, ...rest } = Astro.props;
+
+// Every image in src/assets, so a plain path is all a page needs to write.
+const library = import.meta.glob<ImageMetadata>('/src/assets/**/*.{jpg,jpeg,png,webp,avif,gif,tiff,svg,JPG,JPEG,PNG,WEBP}', { eager: true, import: 'default' });
+const file = typeof src === 'string' && src.startsWith('/src/assets/') ? library[src] : null;
+const optimise = !!file && file.format !== 'svg';
+---
+
+{
+  optimise ? (
+    <Image src={file} alt={alt} layout={layout} priority={priority} class={className} {...(sizes ? { sizes } : {})} {...rest} />
+  ) : (
+    <img src={file ? file.src : src} alt={alt} loading={priority ? 'eager' : 'lazy'} decoding="async" class={className} {...rest} />
+  )
+}

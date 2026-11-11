@@ -1,4 +1,5 @@
 ---
+import SmartImage from '../media/SmartImage.astro';
 // Centred hero: announcement pill, huge headline, two buttons and a framed product screenshot with a brand glow.
 const {
   announcement = "Quiet Hours: notifications that wait until you are ready",
@@ -53,7 +54,7 @@ const {
           <span class="h-2.5 w-2.5 rounded-full bg-line"></span>
           <span class="h-2.5 w-2.5 rounded-full bg-line"></span>
         </div>
-        <img src={image} alt="The Halcyon dashboard showing this week's plan, project progress and upcoming milestones" width="1440" height="900" class="w-full rounded-xl border border-line" />
+        <SmartImage src={image} priority alt="The Halcyon dashboard showing this week's plan, project progress and upcoming milestones" width="1440" height="900" class="w-full rounded-xl border border-line" />
       </div>
     </div>
   </div>

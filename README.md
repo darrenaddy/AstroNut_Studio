@@ -27,7 +27,7 @@ The first `npm install` also installs the bundled starter site in `site/`.
 | **Theme** | With nothing selected, the right panel sets the brand colour (a full 50–950 scale is generated for you), light/dark colours, fonts and corner radius for the whole site. |
 | **Fonts** | Choose the heading, body and code fonts from about 2,000 open-source families, with live previews. It uses Astro's built-in fonts feature: the choice is written to `fonts` in `astro.config.mjs`, and Astro downloads the font and serves it from your own site. |
 | **Content** | The Content tab is a Markdown editor with a live preview and a form for each entry's fields. It reads the collections declared in `src/content.config.ts`. |
-| **Media** | Drop images into the Media section; click one to use it on the selected image. |
+| **Media** | Drop images into the Media section; click one to use it on the selected image. Photos (JPEG, PNG, WebP…) are stored in `src/assets` and optimised by Astro at build time: each is resized into several widths in WebP, and the visitor's browser downloads the one that fits its screen. SVGs and other files go to `public/` and are served as they are. |
 | **Ask AI** | Press ⌘K (Ctrl+K), describe a change, and the assistant edits the files. Each answer is a single undo step. |
 | **Undo anything** | ⌘Z / ⇧⌘Z covers every edit — visual, code, theme, content, and AI. |
 | **Preview sizes** | Mobile → 2xl widths, light/dark mode, zoom. "Browse" mode (the hand) lets you use the site normally. |
@@ -51,6 +51,14 @@ To make a block into a widget, open it, select a piece of text, an image or a li
 When you add something that other pages already use, you choose **Linked** (shared) or **Copy for this page**. A shared placement can later be made independent from the right panel.
 
 The **Inventory** (the list icon next to Components) shows every block, widget and layout, what kind it is, its fields, and which pages use it — including ones nothing uses.
+
+### Images
+
+Optimisation is automatic. When a photo from `src/assets` is given to an image — an `<img>` on the page, a widget's image field, or an image inside a list — Astrophile Studio swaps the plain `<img>` for the project's **SmartImage** component, which hands the photo to Astro's `<Image>`. The value stays a plain path (`/src/assets/team.jpg`), so fields and lists keep working.
+
+Click an optimised image to set its description, how it sizes itself (constrained, full-width or fixed), and whether it loads first (turn that on only for the main image at the top of a page). Blocks can state how wide their images appear with a `sizes` hint, as the blog card does.
+
+Blog post images work the same way: choose a photo for a post's hero image in the Content tab and it is optimised wherever the post is shown.
 
 ### Forms
 

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { ListTree, Box, ChevronRight, Code2, Component, Copy, Database, File, FileText, Folder, FolderPlus, Home, LayoutTemplate, MoreHorizontal, Palette, Pencil, Plus, ScanLine, Trash2, Type, Upload, X, Image as ImageIcon, Link2, List, Square, MousePointerClick, Minus, Heading, FormInput, PanelTop } from 'lucide-react';
-import { useStore, act, type OutlineNode, EMPTY } from '../store';
+import { useStore, act, type OutlineNode, EMPTY, SMART_IMAGE } from '../store';
 import { api, q } from '../api';
 import { Menu } from './ui';
 import { AddChoice, SOURCES } from './Widgets';
@@ -502,9 +502,11 @@ export function Media({ onPick }: { onPick?: (m: any) => void }) {
   };
   const pick = (m: any) => {
     if (onPick) return onPick(m);
-    if (selection?.kind === 'element' && selection.info?.name === 'img') {
-      act().setAttr('src', m.url);
-      act().toast('Image replaced', 'ok');
+    const isImg = selection?.kind === 'element' && selection.info?.name === 'img';
+    const isSmart = selection?.kind === 'component' && selection.info?.componentFile === SMART_IMAGE;
+    if (isImg || isSmart) {
+      act().setImage(m.url);
+      act().toast(m.optimised ? 'Image replaced — Astro will optimise it' : 'Image replaced', 'ok');
     } else {
       navigator.clipboard?.writeText(m.url).catch(() => {});
       act().toast(`Copied ${m.url} — select an image on the page first to replace it`);
@@ -533,13 +535,13 @@ export function Media({ onPick }: { onPick?: (m: any) => void }) {
         </button>
       </div>
       <input ref={input} type="file" multiple hidden accept="image/*,video/mp4,video/webm,application/pdf" onChange={(e) => upload(e.target.files)} />
-      <div className={'dropzone' + (over ? ' over' : '')}>{over ? 'Drop to upload' : 'Drop images here, or click an image to use it'}</div>
+      <div className={'dropzone' + (over ? ' over' : '')}>{over ? 'Drop to upload' : 'Drop images here, or click an image to use it. Photos are optimised automatically.'}</div>
       <div className="media-grid">
         {media.filter((m: any) => m.image).map((m: any) => (
           <div
             key={m.file}
             className={'media-item' + (/logo|favicon/.test(m.name) || m.name.endsWith('.ico') ? ' contain' : '')}
-            title={`${m.url} · ${(m.size / 1024).toFixed(0)} KB`}
+            title={`${m.name} · ${(m.size / 1024).toFixed(0)} KB\n${m.optimised ? 'Photo — Astro resizes it for each screen when the site is built' : m.name.endsWith('.svg') ? 'SVG — scales without resizing' : 'Served as it is'}`}
             onClick={() => pick(m)}
             draggable
             onDragStart={(e) => {
@@ -548,6 +550,7 @@ export function Media({ onPick }: { onPick?: (m: any) => void }) {
             }}
           >
             <img src={(useStore.getState().dev.url || '') + m.url} alt={m.name} loading="lazy" draggable={false} />
+            {m.optimised && <span className="opt" title="Optimised by Astro">✓</span>}
             {!onPick && (
               <button
                 className="x"

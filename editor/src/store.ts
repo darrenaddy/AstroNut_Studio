@@ -114,6 +114,7 @@ export const getIframe = () => iframe;
 const cmd = (type: string, data: any = {}) => iframe?.contentWindow?.postMessage({ __astrophile_cmd: true, type, ...data }, '*');
 
 let opChain: Promise<any> = Promise.resolve();
+export const SMART_IMAGE = 'src/components/media/SmartImage.astro';
 let readyCount = 0;
 let pendingField: any = null;
 let retries = 0;
@@ -345,6 +346,7 @@ export const useStore = create<State>((set, get) => {
           const pf = fileForPath(path);
           set({ ready: true, ...(path !== st.path ? { path, selection: null } : {}), pageFile: pf });
           if (path !== st.path) save('path', path);
+          cmd('config', { root: root(), opaque: [abs(SMART_IMAGE)] });
           cmd('theme', { theme: st.theme });
           cmd('mode', { mode: st.mode });
           if (pf && !get().outlines[pf]) loadOutline(pf);
@@ -368,6 +370,20 @@ export const useStore = create<State>((set, get) => {
           set({ selection: { kind: 'element', file, loc: m.el.loc, index: m.el.index, el: m.el, info: null }, menu: null });
           loadOutline(file).then(reveal);
           refreshSelectionInfo().then(reveal);
+          break;
+        }
+        case 'select-image': {
+          // An optimised image was clicked: select the <SmartImage> tag that placed it.
+          const file = rel(m.parent.file);
+          if (!file) break;
+          api
+            .post('/image-placement', { file, loc: m.parent.loc, index: m.index })
+            .then(async (ref) => {
+              set({ selection: { kind: 'component', file: ref.file, loc: ref.loc, start: ref.start, index: 0, el: m.el, info: null }, menu: null });
+              await refreshSelectionInfo();
+              reveal();
+            })
+            .catch(actions.fail);
           break;
         }
         case 'deselect':
@@ -422,7 +438,11 @@ export const useStore = create<State>((set, get) => {
         case 'drop':
           if (m.data?.image) {
             const pf = get().pageFile;
-            if (pf) actions.rawOp({ type: 'insert', file: pf, pageLevel: true, dropRef: m.ref ? { ...m.ref, file: rel(m.ref.file) } : undefined, html: `<img src="${m.data.image}" alt="" class="mx-auto my-10 w-full max-w-4xl rounded-card" />` });
+            const dropRef = m.ref ? { ...m.ref, file: rel(m.ref.file) } : undefined;
+            const cls = 'mx-auto my-10 w-full max-w-4xl rounded-card';
+            // A photo from src/assets is placed as a SmartImage so Astro optimises it; anything else as a plain <img>.
+            if (pf && String(m.data.image).startsWith('/src/assets/')) actions.rawOp({ type: 'insert', file: pf, pageLevel: true, dropRef, component: SMART_IMAGE, attrs: `src="${m.data.image}" alt="" class="${cls}"` });
+            else if (pf) actions.rawOp({ type: 'insert', file: pf, pageLevel: true, dropRef, html: `<img src="${m.data.image}" alt="" class="${cls}" />` });
           } else actions.insertBlock(m.data, m.ref);
           break;
       }
@@ -512,6 +532,12 @@ export const useStore = create<State>((set, get) => {
       cmd('preview-class', { key, classes });
       set({ selection: { ...s, info: s.info ? { ...s.info, classes } : s.info } });
       return actions.op(() => ({ type: 'setAttr', name: 'class', value: classes.trim() || null }));
+    },
+    /** Give the selected image a new picture (an <img> element, or an optimised SmartImage). */
+    setImage(url: string) {
+      const s = get().selection;
+      if (s?.kind === 'component') return actions.setField('src', url);
+      return actions.op(() => ({ type: 'setImage', value: url }));
     },
     setAttr(name: string, value: string | null) {
       return actions.op(() => ({ type: 'setAttr', name, value }));

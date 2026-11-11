@@ -61,6 +61,17 @@
 
   // ---- element helpers ---------------------------------------------------
   const pick = (el) => (el && el.closest ? el.closest(`[${FILE}]`) : null);
+
+  // Some rendered elements come from files the editor shouldn't open directly:
+  // Astro's own <Image> component, and the project's SmartImage wrapper around it.
+  // A click on one of those selects the image as placed in the page instead.
+  let cfg = { root: '', opaque: [] };
+  const isOpaque = (el) => !!cfg.root && (!fileOf(el).startsWith(cfg.root + '/') || fileOf(el).includes('/node_modules/') || cfg.opaque.includes(fileOf(el)));
+  const hostOf = (el) => {
+    let p = pick(el.parentElement);
+    while (p && isOpaque(p)) p = pick(p.parentElement);
+    return p;
+  };
   const fileOf = (el) => el.getAttribute(FILE);
   const locOf = (el) => el.getAttribute(LOC);
 
@@ -283,7 +294,18 @@
       }
       e.preventDefault();
       e.stopPropagation();
-      selectEl(pick(e.target));
+      const el = pick(e.target);
+      const host = el && isOpaque(el) ? hostOf(el) : null;
+      if (el && isOpaque(el)) {
+        if (!host) return selectEl(null);
+        // which image inside its host element this is
+        const mates = [...host.querySelectorAll('img')].filter((i) => { const a = pick(i); return a && isOpaque(a) && hostOf(a) === host; });
+        const img = el.tagName === 'IMG' ? el : el.querySelector('img') || el;
+        setSelected([img], keyOf(img), 'image · optimised', true);
+        post('select-image', { parent: keyOf(host), index: Math.max(0, mates.indexOf(img)), el: describe(img) });
+        return;
+      }
+      selectEl(el);
     },
     true,
   );
@@ -306,7 +328,7 @@
       e.preventDefault();
       e.stopPropagation();
       const el = pick(e.target);
-      if (el) post('dblclick', { el: describe(el) });
+      if (el && !isOpaque(el)) post('dblclick', { el: describe(el) });
     },
     true,
   );
@@ -316,7 +338,7 @@
       if (mode !== 'edit' || editing) return;
       e.preventDefault();
       const el = pick(e.target);
-      if (!el) return;
+      if (!el || isOpaque(el)) return;
       selectEl(el);
       post('contextmenu', { x: e.clientX, y: e.clientY });
     },
@@ -437,6 +459,9 @@
       case 'hover':
         extHoverEls = m.key ? (m.key.component ? componentRuns(m.key.file)[m.key.index || 0] || null : [find(m.key)].filter(Boolean)) : null;
         if (extHoverEls && !extHoverEls.length) extHoverEls = null;
+        break;
+      case 'config':
+        cfg = { root: m.root || '', opaque: m.opaque || [] };
         break;
       case 'mode':
         mode = m.mode;

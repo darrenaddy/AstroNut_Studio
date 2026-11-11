@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowRight, ArrowUp, Code2, Component, Copy, CornerLeftUp, EyeOff, FileCode2, Image as ImageIcon, MoveDown, MoveUp, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
-import { useStore, act, BREAKPOINTS, EMPTY } from '../store';
+import { useStore, act, BREAKPOINTS, EMPTY, SMART_IMAGE } from '../store';
 import { api } from '../api';
 import * as tw from '../tw';
 import { Group, Modal, Popover, Seg, SelectField, TextField } from './ui';
@@ -400,7 +400,7 @@ function DesignTab() {
             ) : (
               <div style={{ display: 'flex', gap: 6 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <TextField value={attr('src')} placeholder="/media/photo.jpg" mono onCommit={(x) => act().setAttr('src', x || null)} />
+                  <TextField value={attr('src')} placeholder="/media/photo.jpg" mono onCommit={(x) => (tag === 'img' ? act().setImage(x) : act().setAttr('src', x || null))} />
                 </div>
                 {tag === 'img' && (
                   <button className="btn sm" onClick={() => setPicker(true)}>
@@ -428,7 +428,7 @@ function DesignTab() {
             <div style={{ overflowY: 'auto', paddingBottom: 10 }}>
               <Media
                 onPick={(m) => {
-                  act().setAttr('src', m.url);
+                  act().setImage(m.url);
                   setPicker(false);
                 }}
               />
@@ -849,7 +849,7 @@ function ComponentPanel() {
           ) : (
             <p className="note">Astrophile Studio couldn’t find this component’s file from the page’s imports.</p>
           )}
-          {comp && comp.kind !== 'layout' && (
+          {comp && comp.kind !== 'layout' && info.componentFile !== SMART_IMAGE && (
             <div className="usedon">
               <SourceTag source={comp.source} />
               <span className="sub">
