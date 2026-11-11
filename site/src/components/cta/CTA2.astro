@@ -1,22 +1,29 @@
 ---
 // CTA 2 — simple split strip: headline left, button right, hairlines above and below.
+const {
+  title = "Ready when you are.",
+  text = "Start a free workspace today and invite the team whenever it suits you.",
+  buttonLabel = "Get started free",
+  buttonLink = "/pricing",
+  secondLabel = "Talk to sales",
+} = Astro.props;
 ---
 
 <section class="bg-bg py-12 sm:py-16">
   <div class="mx-auto max-w-6xl px-6">
     <div class="flex flex-col gap-8 border-y border-line py-12 sm:py-14 md:flex-row md:items-center md:justify-between">
       <div class="max-w-2xl">
-        <h2 class="font-display text-3xl font-semibold tracking-tight text-fg sm:text-4xl">Ready when you are.</h2>
-        <p class="mt-3 text-lg leading-relaxed text-muted">Start a free workspace today and invite the team whenever it suits you.</p>
+        <h2 class="font-display text-3xl font-semibold tracking-tight text-fg sm:text-4xl">{title}</h2>
+        <p class="mt-3 text-lg leading-relaxed text-muted">{text}</p>
       </div>
       <div class="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
-        <a href="/pricing" class="inline-flex items-center justify-center gap-2 rounded-button bg-brand-600 px-7 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
-          <span>Get started free</span>
+        <a href={buttonLink} class="inline-flex items-center justify-center gap-2 rounded-button bg-brand-600 px-7 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
+          <span>{buttonLabel}</span>
           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 12h14M13 6l6 6-6 6"></path>
           </svg>
         </a>
-        <a href="/contact" class="inline-flex items-center justify-center rounded-button px-5 py-3.5 text-base font-semibold text-fg transition hover:text-brand-600 dark:hover:text-brand-400">Talk to sales</a>
+        <a href="/contact" class="inline-flex items-center justify-center rounded-button px-5 py-3.5 text-base font-semibold text-fg transition hover:text-brand-600 dark:hover:text-brand-400">{secondLabel}</a>
       </div>
     </div>
   </div>

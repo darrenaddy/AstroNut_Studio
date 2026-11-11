@@ -1,5 +1,13 @@
 ---
 // CTA — large rounded brand panel with headline, copy and two buttons.
+const {
+  title = "Give your team a calmer week",
+  text = "Set up your first plan in ten minutes and see what work feels like without the noise.",
+  buttonLabel = "Start free",
+  buttonLink = "/pricing",
+  secondLabel = "Book a walkthrough",
+  secondLink = "/contact",
+} = Astro.props;
 ---
 
 <section class="bg-bg py-20 sm:py-28">
@@ -10,13 +18,13 @@
       <div class="absolute -bottom-40 -right-20 -z-10 h-80 w-80 rounded-full bg-brand-900/50 blur-3xl" aria-hidden="true"></div>
 
       <p class="inline-flex items-center rounded-button border border-white/25 bg-white/10 px-4 py-1.5 text-sm font-medium text-white">Free for teams of up to five</p>
-      <h2 class="mx-auto mt-6 max-w-3xl font-display text-4xl font-semibold tracking-tight text-white sm:text-6xl">Give your team a calmer week</h2>
-      <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-brand-100">Set up your first plan in ten minutes and see what work feels like without the noise.</p>
+      <h2 class="mx-auto mt-6 max-w-3xl font-display text-4xl font-semibold tracking-tight text-white sm:text-6xl">{title}</h2>
+      <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-brand-100">{text}</p>
 
       <div class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <a href="/pricing" class="inline-flex w-full items-center justify-center rounded-button bg-white px-7 py-3.5 text-base font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-600 sm:w-auto">Start free</a>
-        <a href="/contact" class="inline-flex w-full items-center justify-center gap-2 rounded-button border border-white/30 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto">
-          <span>Book a walkthrough</span>
+        <a href={buttonLink} class="inline-flex w-full items-center justify-center rounded-button bg-white px-7 py-3.5 text-base font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-600 sm:w-auto">{buttonLabel}</a>
+        <a href={secondLink} class="inline-flex w-full items-center justify-center gap-2 rounded-button border border-white/30 px-7 py-3.5 text-base font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto">
+          <span>{secondLabel}</span>
           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 12h14M13 6l6 6-6 6"></path>
           </svg>

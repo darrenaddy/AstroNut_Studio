@@ -1,87 +1,60 @@
 ---
 // FAQ — centred heading with six accordion questions.
+const {
+  questions = [
+    {
+      question: "How is Halcyon different from other planning tools?",
+      answer: "Most tools add more: more views, more notifications, more dashboards. Halcyon shows each person the handful of things that matter this week and keeps everything else quietly out of the way.",
+    },
+    {
+      question: "Is there a free plan?",
+      answer: "Yes. Teams of up to five can use Halcyon free, forever, with unlimited projects. Paid plans add timelines, guest access and admin controls when you need them.",
+    },
+    {
+      question: "Can we import our existing projects?",
+      answer: "You can bring boards, tasks, owners and due dates across from Trello, Asana, Linear or a plain CSV file. Most teams are fully moved in under an hour.",
+    },
+    {
+      question: "How do notifications work?",
+      answer: "Halcyon is quiet by default. Updates are gathered into a single morning digest, and only direct mentions or a slipping deadline will ever interrupt you.",
+    },
+    {
+      question: "Is our data safe with you?",
+      answer: "Your data is encrypted in transit and at rest, backed up hourly and never sold or used for advertising. You can export everything, or delete it for good, at any time.",
+    },
+    {
+      question: "Can we cancel whenever we like?",
+      answer: "Of course. There are no contracts and no cancellation fees. If you leave, your workspace stays readable for 90 days so nothing is lost in the move.",
+    },
+  ],
+  title = "Everything you might be wondering",
+} = Astro.props;
 ---
 
 <section class="bg-bg py-20 sm:py-28">
   <div class="mx-auto max-w-6xl px-6">
     <div class="mx-auto max-w-2xl text-center">
       <p class="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">Questions, answered</p>
-      <h2 class="mt-4 font-display text-4xl font-semibold tracking-tight text-fg sm:text-5xl">Everything you might be wondering</h2>
+      <h2 class="mt-4 font-display text-4xl font-semibold tracking-tight text-fg sm:text-5xl">{title}</h2>
       <p class="mt-5 text-lg leading-relaxed text-muted">Straight answers about how Halcyon works, what it costs and how to move your team over without a lost weekend.</p>
     </div>
 
     <div class="mx-auto mt-14 max-w-3xl space-y-3">
-      <details class="group rounded-card border border-line bg-bg px-6 shadow-sm transition-colors open:bg-surface">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&::-webkit-details-marker]:hidden">
-          <span class="font-display text-lg font-medium tracking-tight text-fg">How is Halcyon different from other planning tools?</span>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-brand-600">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-        </summary>
-        <p class="pb-6 pr-10 leading-relaxed text-muted">Most tools add more: more views, more notifications, more dashboards. Halcyon shows each person the handful of things that matter this week and keeps everything else quietly out of the way.</p>
-      </details>
-
-      <details class="group rounded-card border border-line bg-bg px-6 shadow-sm transition-colors open:bg-surface">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&::-webkit-details-marker]:hidden">
-          <span class="font-display text-lg font-medium tracking-tight text-fg">Is there a free plan?</span>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-brand-600">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-        </summary>
-        <p class="pb-6 pr-10 leading-relaxed text-muted">Yes. Teams of up to five can use Halcyon free, forever, with unlimited projects. Paid plans add timelines, guest access and admin controls when you need them.</p>
-      </details>
-
-      <details class="group rounded-card border border-line bg-bg px-6 shadow-sm transition-colors open:bg-surface">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&::-webkit-details-marker]:hidden">
-          <span class="font-display text-lg font-medium tracking-tight text-fg">Can we import our existing projects?</span>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-brand-600">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-        </summary>
-        <p class="pb-6 pr-10 leading-relaxed text-muted">You can bring boards, tasks, owners and due dates across from Trello, Asana, Linear or a plain CSV file. Most teams are fully moved in under an hour.</p>
-      </details>
-
-      <details class="group rounded-card border border-line bg-bg px-6 shadow-sm transition-colors open:bg-surface">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&::-webkit-details-marker]:hidden">
-          <span class="font-display text-lg font-medium tracking-tight text-fg">How do notifications work?</span>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-brand-600">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-        </summary>
-        <p class="pb-6 pr-10 leading-relaxed text-muted">Halcyon is quiet by default. Updates are gathered into a single morning digest, and only direct mentions or a slipping deadline will ever interrupt you.</p>
-      </details>
-
-      <details class="group rounded-card border border-line bg-bg px-6 shadow-sm transition-colors open:bg-surface">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&::-webkit-details-marker]:hidden">
-          <span class="font-display text-lg font-medium tracking-tight text-fg">Is our data safe with you?</span>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-brand-600">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-        </summary>
-        <p class="pb-6 pr-10 leading-relaxed text-muted">Your data is encrypted in transit and at rest, backed up hourly and never sold or used for advertising. You can export everything, or delete it for good, at any time.</p>
-      </details>
-
-      <details class="group rounded-card border border-line bg-bg px-6 shadow-sm transition-colors open:bg-surface">
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&::-webkit-details-marker]:hidden">
-          <span class="font-display text-lg font-medium tracking-tight text-fg">Can we cancel whenever we like?</span>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-brand-600">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"></path>
-            </svg>
-          </span>
-        </summary>
-        <p class="pb-6 pr-10 leading-relaxed text-muted">Of course. There are no contracts and no cancellation fees. If you leave, your workspace stays readable for 90 days so nothing is lost in the move.</p>
-      </details>
+      {
+        questions.map((item) => (
+          <details class="group rounded-card border border-line bg-bg px-6 shadow-sm transition-colors open:bg-surface">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 [&::-webkit-details-marker]:hidden">
+              <span class="font-display text-lg font-medium tracking-tight text-fg">{item.question}</span>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-brand-600">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+              </span>
+            </summary>
+            <p class="pb-6 pr-10 leading-relaxed text-muted">{item.answer}</p>
+          </details>
+        ))
+      }
     </div>
   </div>
 </section>
