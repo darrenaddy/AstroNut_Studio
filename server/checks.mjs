@@ -30,6 +30,32 @@ function sourceFiles(project) {
   return project.walk('src', (n) => /\.(astro|md|mdx)$/.test(n)).map((file) => ({ file, text: project.readOr(file, '') }));
 }
 
+const bodyOf = (md) => md.replace(/^---[\s\S]*?\n---/, '');
+const MD_IMAGE = /!\[((?:[^\]\\]|\\.)*)\]\(\s*<?([^)\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
+
+/** Pictures written in the text of a Markdown file (not its fields), ignoring code samples. */
+function mdImages(text) {
+  const head = text.length - bodyOf(text).length;
+  const blank = (m) => m.replace(/[^\n]/g, ' ');
+  const body = text.slice(head).replace(/^(`{3,}|~{3,})[\s\S]*?^\1[^\n]*$/gm, blank).replace(/`[^`\n]*`/g, blank);
+  const out = [];
+  for (const m of body.matchAll(MD_IMAGE)) out.push({ alt: m[1], src: m[2], index: head + m.index, line: text.slice(0, head + m.index).split('\n').length });
+  return out;
+}
+/** How a Markdown file refers to another project file: relative, which is what lets Astro optimise it. */
+const relTo = (from, to) => {
+  const r = path.posix.relative(path.posix.dirname(from), to);
+  return r.startsWith('.') ? r : './' + r;
+};
+const plainPath = (src) => {
+  const p = src.split(/[?#]/)[0];
+  try {
+    return decodeURI(p);
+  } catch {
+    return p;
+  }
+};
+
 export async function imageCheck(project) {
   const findings = [];
   const files = sourceFiles(project);
@@ -69,6 +95,27 @@ export async function imageCheck(project) {
     }
   }
 
+  // Pictures written into the text of posts.
+  const mdUses = {}; // media file -> Markdown files whose text shows it
+  for (const { file, text } of files) {
+    if (!/\.mdx?$/.test(file)) continue;
+    for (const im of mdImages(text)) {
+      const ref = { id: `${file}:${im.index}`, file, line: im.line, entry: file };
+      const remote = /^(https?:)?\/\//.test(im.src) || im.src.startsWith('data:');
+      if (!remote) {
+        const relative = !im.src.startsWith('/');
+        const target = im.src.startsWith('/src/') ? plainPath(im.src.slice(1)) : relative ? path.posix.normalize(path.posix.join(path.posix.dirname(file), plainPath(im.src))) : 'public' + plainPath(im.src);
+        if (!project.exists(target)) {
+          add({ kind: 'missing', level: 'error', title: 'A picture in this post can’t be found', detail: `The post asks for ${im.src}, but there is no such file. ` + (relative ? 'The site will not build until the picture is put back or taken out of the post.' : 'Visitors will see a broken image.'), ...ref, id: 'missing:' + ref.id });
+        } else {
+          (mdUses[target] ||= []).push(file);
+          if (im.src.startsWith('/src/')) add({ kind: 'plain', level: 'error', title: 'This picture will be missing from the published site', detail: 'The post points at it in a way that only works while editing. Writing the path relative to the post fixes it and lets Astro optimise the picture.', ...ref, id: 'plain:' + ref.id, fix: { type: 'md-path', label: 'Fix it', args: { file, src: im.src } } });
+        }
+      }
+      if (!im.alt.trim()) add({ kind: 'alt', level: 'warn', title: 'A picture in this post has no description', detail: 'People using a screen reader hear nothing for this picture. Open the post, click the picture’s settings button and describe it.', ...ref, id: 'alt:' + ref.id });
+    }
+  }
+
   // More than one "load first" image on a page defeats the setting.
   for (const page of pages) {
     const seen = new Set();
@@ -87,23 +134,14 @@ export async function imageCheck(project) {
   const sharp = siteSharp(project);
   const all = files.map((f) => f.text).join('\n');
   for (const m of media) {
-    const uses = files.filter((f) => f.text.includes(m.url));
+    const uses = files.filter((f) => f.text.includes(m.url) || mdUses[m.file]?.includes(f.file));
     const isRaster = RASTER.test(m.name);
     if (!uses.length && !/favicon/i.test(m.name) && !all.includes(m.name)) {
       add({ kind: 'unused', level: 'info', title: `${m.name} isn’t used anywhere`, detail: `${kb(m.size)} KB in ${path.dirname(m.file)}. Remove it if you no longer need it.`, media: m.file, thumb: m.url, fix: { type: 'delete-media', label: 'Delete file', confirm: `Delete ${m.name} for good? This can’t be undone.`, args: { file: m.file } } });
       continue;
     }
     if (isRaster && !m.optimised && uses.length) {
-      const inBody = uses.some((f) => /\.mdx?$/.test(f.file) && bodyOf(f.text).includes(m.url));
-      add({
-        kind: 'unoptimised',
-        level: 'warn',
-        title: `${m.name} is served at full size`,
-        detail: `${kb(m.size)} KB, used in ${uses.length} place${uses.length === 1 ? '' : 's'}. It lives in public/, so every visitor downloads the whole file. Moving it to src/assets lets Astro resize it for each screen.` + (inBody ? ' It is used inside the text of a Markdown file, which has to be changed by hand.' : ''),
-        media: m.file,
-        thumb: m.url,
-        fix: inBody ? null : { type: 'optimise', label: 'Optimise it', args: { file: m.file } },
-      });
+      add({ kind: 'unoptimised', level: 'warn', title: `${m.name} is served at full size`, detail: `${kb(m.size)} KB, used in ${uses.length} place${uses.length === 1 ? '' : 's'}. It lives in public/, so every visitor downloads the whole file. Moving it to src/assets lets Astro resize it for each screen.`, media: m.file, thumb: m.url, fix: { type: 'optimise', label: 'Optimise it', args: { file: m.file } } });
     }
     if (isRaster) {
       let side = 0;
@@ -123,8 +161,6 @@ export async function imageCheck(project) {
   return { findings, counts: { error: findings.filter((f) => f.level === 'error').length, warn: findings.filter((f) => f.level === 'warn').length, info: findings.filter((f) => f.level === 'info').length }, images: media.length };
 }
 
-const bodyOf = (md) => md.replace(/^---[\s\S]*?\n---/, '');
-
 /** Apply one of the fixes offered by imageCheck. */
 export async function fixImage(project, { type, args }) {
   switch (type) {
@@ -134,6 +170,13 @@ export async function fixImage(project, { type, args }) {
       const src = project.read(args.file);
       const out = project.smarten(args.file, src, (n) => n.start === args.start);
       await project.transaction('Optimise image', () => project.write(args.file, out));
+      return { ok: true };
+    }
+    case 'md-path': {
+      const text = project.read(args.file);
+      const head = text.length - bodyOf(text).length;
+      const out = text.slice(0, head) + text.slice(head).split(`](${args.src}`).join(`](${relTo(args.file, plainPath(args.src.slice(1)))}`);
+      await project.transaction('Fix picture path', () => project.write(args.file, out));
       return { ok: true };
     }
     case 'delete-media':
@@ -160,6 +203,11 @@ export async function fixImage(project, { type, args }) {
         for (const { file, text } of sourceFiles(project)) {
           if (!text.includes(oldUrl)) continue;
           let out = text.split(oldUrl).join(newUrl);
+          if (/\.mdx?$/.test(file)) {
+            // in the text of a post the picture has to be written relative to the post for Astro to pick it up
+            const head = text.length - bodyOf(text).length;
+            out = text.slice(0, head).split(oldUrl).join(newUrl) + text.slice(head).split(`](${oldUrl}`).join(`](${relTo(file, to)}`).split(oldUrl).join(newUrl);
+          }
           // plain <img> tags that now point at src/assets need to become optimised images
           if (file.endsWith('.astro')) out = project.smarten(file, out, (n) => n.attrs.some((a) => a.name === 'src' && a.kind === 'string' && a.value === newUrl));
           project.write(file, out);

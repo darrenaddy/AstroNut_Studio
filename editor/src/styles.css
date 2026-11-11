@@ -496,3 +496,43 @@ button.pagechip:hover { background: var(--active); color: var(--fg); }
 .lhfinding .nodes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .lhfinding .nodes button { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--hover); color: var(--fg2); max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .lhfinding .nodes button:hover { background: var(--accent-soft); color: var(--accent); }
+
+/* ---- visual post editor (MDXEditor, themed with the app's own colours) ---- */
+.content-main.visual { grid-template-columns: 300px minmax(0, 1fr); }
+.md-visual { display: flex; flex-direction: column; overflow: hidden !important; }
+.md-why { margin: 0; padding: 9px 14px; font-size: 12px; line-height: 1.45; color: var(--fg2); background: color-mix(in srgb, var(--dyn) 12%, transparent); border-bottom: 1px solid var(--line); flex: none; }
+.post-editor-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mdxeditor.post-editor, .mdxeditor-popup-container.post-editor {
+  --baseBase: var(--bg); --baseBgSubtle: var(--panel); --baseBg: var(--hover); --baseBgHover: var(--active); --baseBgActive: var(--active);
+  --baseLine: var(--line); --baseBorder: var(--line); --baseBorderHover: var(--muted); --baseSolid: var(--muted); --baseSolidHover: var(--fg2);
+  --baseText: var(--fg2); --baseTextContrast: var(--fg); --basePageBg: var(--bg);
+  --accentBase: var(--bg); --accentBgSubtle: var(--hover); --accentBg: var(--hover); --accentBgHover: var(--active); --accentBgActive: var(--active);
+  --accentLine: var(--line); --accentBorder: var(--accent); --accentBorderHover: var(--accent); --accentSolid: var(--accent); --accentSolidHover: var(--accent);
+  --accentText: var(--accent); --accentTextContrast: var(--fg);
+  --font-body: inherit; --font-mono: var(--mono);
+  color: var(--fg);
+}
+.mdxeditor.post-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mdxeditor.post-editor .mdxeditor-toolbar { flex: none; border-radius: 0; border-bottom: 1px solid var(--line); background: var(--panel); position: static; padding: 6px 10px; }
+.mdxeditor.post-editor .mdxeditor-root-contenteditable { flex: 1; min-height: 0; overflow-y: auto; }
+.post-prose { max-width: 760px; margin: 0 auto; padding: 28px 36px 120px !important; font-size: 15.5px; line-height: 1.7; color: var(--fg); outline: none; user-select: text; min-height: 100%; }
+.post-prose h1, .post-prose h2 { font-size: 23px; letter-spacing: -.015em; line-height: 1.3; margin: 1.6em 0 .4em; font-weight: 650; }
+.post-prose h3 { font-size: 18px; margin: 1.4em 0 .4em; font-weight: 650; }
+.post-prose h4 { font-size: 15.5px; margin: 1.3em 0 .3em; font-weight: 650; }
+.post-prose > :first-child { margin-top: 0; }
+.post-prose p { margin: 0 0 1em; }
+.post-prose ul, .post-prose ol { margin: 0 0 1em; padding-left: 1.5em; }
+.post-prose ul { list-style: disc; } .post-prose ol { list-style: decimal; }
+.post-prose li { margin: .25em 0; }
+.post-prose blockquote { margin: 1.2em 0; padding: 2px 16px; border-left: 3px solid var(--accent); color: var(--fg2); font-style: italic; }
+.post-prose blockquote p:last-child { margin-bottom: 0; }
+.post-prose code { font-family: var(--mono); font-size: .88em; background: var(--hover); padding: 1px 5px; border-radius: 5px; }
+.post-prose a { color: var(--accent); text-decoration: underline; }
+.post-prose hr { border: 0; border-top: 1px solid var(--line-strong); margin: 2em 0; }
+.post-prose { container-type: inline-size; }
+/* The editor wraps each picture in a shrink-to-fit box, so a percentage width has nothing to measure against. */
+.post-prose img { max-width: 100cqw; height: auto; border-radius: 10px; vertical-align: top; }
+.post-prose table { border-collapse: collapse; margin: 1em 0; }
+.post-prose td, .post-prose th { border: 1px solid var(--line); padding: 6px 10px; }
+/* An SVG with no size of its own fills the column on the site; do the same here instead of collapsing to nothing. */
+.post-prose img[src*=".svg"] { width: 100cqw; }

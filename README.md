@@ -26,7 +26,7 @@ The first `npm install` also installs the bundled starter site in `site/`.
 | **Pages** | Add, rename, duplicate and delete pages. Each page is one file in `src/pages`. |
 | **Theme** | With nothing selected, the right panel sets the brand colour (a full 50–950 scale is generated for you), light/dark colours, fonts and corner radius for the whole site. |
 | **Fonts** | Choose the heading, body and code fonts from about 2,000 open-source families, with live previews. It uses Astro's built-in fonts feature: the choice is written to `fonts` in `astro.config.mjs`, and Astro downloads the font and serves it from your own site. |
-| **Content** | The Content tab is a Markdown editor with a live preview and a form for each entry's fields. It reads the collections declared in `src/content.config.ts`. |
+| **Content** | The Content tab is where you write. Posts open in a visual editor (headings, lists, links, tables, pictures) with a form for each entry's fields; a toggle switches to the raw Markdown with a live preview. It reads the collections declared in `src/content.config.ts`. |
 | **Media** | Drop images into the Media section; click one to use it on the selected image. Photos (JPEG, PNG, WebP…) are stored in `src/assets` and optimised by Astro at build time: each is resized into several widths in WebP, and the visitor's browser downloads the one that fits its screen. SVGs and other files go to `public/` and are served as they are. |
 | **Ask AI** | Press ⌘K (Ctrl+K), describe a change, and the assistant edits the files. Each answer is a single undo step. |
 | **Undo anything** | ⌘Z / ⇧⌘Z covers every edit — visual, code, theme, content, and AI. |
@@ -59,6 +59,10 @@ Optimisation is automatic. When a photo from `src/assets` is given to an image �
 Click an optimised image to set its description, how it sizes itself (constrained, full-width or fixed), and whether it loads first (turn that on only for the main image at the top of a page). Blocks can state how wide their images appear with a `sizes` hint, as the blog card does.
 
 Blog post images work the same way: choose a photo for a post's hero image in the Content tab and it is optimised wherever the post is shown.
+
+Pictures inside a post's text are added from the editor's toolbar, or by pasting or dropping a photo. Each one is uploaded to `src/assets`, asks for a description, and is written into the post as an ordinary relative Markdown image, which Astro optimises at build time.
+
+The visual editor is the open-source [MDXEditor](https://mdxeditor.dev). Posts stay plain Markdown. A post the visual editor can't show faithfully (raw HTML, components, footnotes) opens as Markdown instead, so it is never rewritten behind your back.
 
 ### Site checks
 

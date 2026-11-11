@@ -78,6 +78,11 @@ function Finding({ f, onFix }: { f: any; onFix?: () => void }) {
             <MousePointerClick size={12} /> Show
           </button>
         )}
+        {f.entry && (
+          <button className="btn sm ghost" onClick={() => (useStore.setState({ checksOpen: false, entryFile: f.entry }), act().setTab('content'))}>
+            <MousePointerClick size={12} /> Open post
+          </button>
+        )}
         {f.fix && onFix && (
           <button className="btn sm" onClick={onFix}>
             {f.fix.label}

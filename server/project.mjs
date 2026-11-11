@@ -996,9 +996,23 @@ export class Project {
   }
 
   saveEntry(file, data, body) {
-    const clean = {};
-    for (const [k, v] of Object.entries(data || {})) if (v !== '' && v !== null && v !== undefined) clean[k] = v;
-    const out = matter.stringify('\n' + String(body ?? '').replace(/^\n+/, ''), clean);
+    const tidy = (d) => {
+      const out = {};
+      for (const [k, v] of Object.entries(d || {})) if (v !== '' && v !== null && v !== undefined) out[k] = v;
+      return out;
+    };
+    const clean = tidy(data);
+    const text = String(body ?? '').replace(/^\n+/, '').replace(/\s*$/, '\n');
+    // When only the writing changed, keep the fields above it exactly as they were typed.
+    const raw = this.readOr(file, '');
+    let out = null;
+    if (raw) {
+      const was = matter(raw);
+      const head = raw.slice(0, raw.length - was.content.length);
+      if (/^---/.test(head) && JSON.stringify(tidy(normalizeData(was.data))) === JSON.stringify(clean)) out = head.replace(/\n*$/, '\n\n') + text;
+    }
+    out ??= matter.stringify('\n' + text, clean, { lineWidth: -1 });
+    if (out === raw) return;
     this.transaction(`Edit ${path.basename(file)}`, () => this.write(file, out));
   }
 

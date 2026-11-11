@@ -1,13 +1,24 @@
 // Markdown + frontmatter editor for content collection entries.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { marked } from 'marked';
 import { ExternalLink, FileText, Trash2 } from 'lucide-react';
 import { useStore, act, EMPTY } from '../store';
 import { api, q } from '../api';
 import { Code } from './Code';
-import { Modal, Switch } from './ui';
+import { Modal, Seg, Switch } from './ui';
 import { Media } from './LeftPanel';
 import { useDark } from './Inspector';
+import { previewUrl, visualBlocker } from './postPaths';
+
+const PostEditor = lazy(() => import('./PostEditor'));
+const MODE_KEY = 'astrophile.postMode';
+const preferred = () => {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'markdown' ? 'markdown' : 'visual';
+  } catch {
+    return 'visual';
+  }
+};
 
 export function ContentEditor() {
   const file = useStore((s) => s.entryFile);
@@ -18,6 +29,9 @@ export function ContentEditor() {
   const [entry, setEntry] = useState<any>(null);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'dirty'>('saved');
   const [picking, setPicking] = useState<string | null>(null);
+  const [mode, setMode] = useState<'visual' | 'markdown'>('visual');
+  const [why, setWhy] = useState<string | null>(null); // why this post has to stay in Markdown view
+  const [mount, setMount] = useState(0);
   const timer = useRef<any>(null);
   const latest = useRef<any>(null);
 
@@ -27,7 +41,16 @@ export function ContentEditor() {
     setEntry(null);
     if (!file) return;
     let live = true;
-    api.get('/content/entry' + q({ file })).then((e) => live && setEntry(e)).catch(act().fail);
+    api
+      .get('/content/entry' + q({ file }))
+      .then((e) => {
+        if (!live) return;
+        const blocked = visualBlocker(file, e.body || '');
+        setWhy(blocked);
+        setMode(blocked ? 'markdown' : preferred());
+        setEntry(e);
+      })
+      .catch(act().fail);
     return () => {
       live = false;
       clearTimeout(timer.current);
@@ -59,7 +82,26 @@ export function ContentEditor() {
   };
   const setField = (name: string, value: any) => update({ data: { ...entry.data, [name]: value } });
 
-  const html = useMemo(() => (entry ? (marked.parse(entry.body || '', { async: false }) as string) : ''), [entry?.body]);
+  const html = useMemo(() => {
+    if (!entry || !file) return '';
+    const out = marked.parse(entry.body || '', { async: false }) as string;
+    // Pictures are written relative to the post; point them at the running site so they show here.
+    return out.replace(/(<img[^>]*\ssrc=")([^"]*)"/g, (_m, pre, src) => `${pre}${previewUrl(file, src, devUrl || '')}"`);
+  }, [entry?.body, file, devUrl]);
+
+  const switchMode = (next: string) => {
+    if (!next || next === mode) return;
+    if (next === 'visual') {
+      const blocked = visualBlocker(file!, entry.body || '');
+      setWhy(blocked);
+      if (blocked) return;
+      setMount((n) => n + 1);
+    }
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {}
+    setMode(next as any);
+  };
 
   if (!file) {
     return (
@@ -89,6 +131,7 @@ export function ContentEditor() {
         <b style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.data.title || id}</b>
         <span className="sub" style={{ fontFamily: 'var(--mono)' }}>{file.replace('src/content/', '')}</span>
         <span className="grow" />
+        <Seg full={false} value={mode} onChange={switchMode} options={[{ value: 'visual', label: 'Visual', tip: 'Write and format the post as it will read' }, { value: 'markdown', label: 'Markdown', tip: 'Edit the Markdown file directly' }]} />
         <span className="sub">{saved === 'saved' ? 'All changes saved' : saved === 'saving' ? 'Saving…' : 'Unsaved…'}</span>
         {liveUrl && (
           <button
@@ -137,7 +180,7 @@ export function ContentEditor() {
           </div>
         </Modal>
       )}
-      <div className="content-main">
+      <div className={'content-main' + (mode === 'visual' ? ' visual' : '')}>
         <div className="fm">
           <div className="sub" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>Fields</div>
           {fields.map((f: any) => {
@@ -174,15 +217,40 @@ export function ContentEditor() {
             These fields are the entry’s <b>frontmatter</b>. Which fields exist is decided by the collection’s schema in <button style={{ textDecoration: 'underline' }} onClick={() => useStore.setState({ codeFile: 'src/content.config.ts' })}>content.config.ts</button>.
           </p>
         </div>
-        <div className="md-edit">
-          <Code key={file} value={entry.body} onChange={(body) => update({ body })} filename="entry.md" minimal dark={dark} />
-        </div>
-        <div className="md-preview">
-          {entry.data.heroImage && <img className="cover" src={(devUrl || '') + entry.data.heroImage} alt="" />}
-          <h1>{entry.data.title}</h1>
-          {entry.data.description && <p className="lede">{entry.data.description}</p>}
-          <div dangerouslySetInnerHTML={{ __html: html }} />
-        </div>
+        {mode === 'visual' ? (
+          <div className="md-visual">
+            <Suspense fallback={<div className="center-empty">Loading the editor…</div>}>
+              <PostEditor
+                key={file + ':' + mount}
+                file={file}
+                body={entry.body || ''}
+                devUrl={devUrl || ''}
+                onChange={(body) => update({ body })}
+                onFallback={(reason) => {
+                  setWhy(reason);
+                  setMode('markdown');
+                }}
+              />
+            </Suspense>
+          </div>
+        ) : (
+          <>
+            <div className="md-edit">
+              {why && (
+                <p className="md-why">
+                  This post opens as Markdown because {why}. Editing it here keeps it exactly as written.
+                </p>
+              )}
+              <Code key={file} value={entry.body} onChange={(body) => update({ body })} filename="entry.md" minimal dark={dark} />
+            </div>
+            <div className="md-preview">
+              {entry.data.heroImage && <img className="cover" src={(devUrl || '') + entry.data.heroImage} alt="" />}
+              <h1>{entry.data.title}</h1>
+              {entry.data.description && <p className="lede">{entry.data.description}</p>}
+              <div dangerouslySetInnerHTML={{ __html: html }} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
