@@ -25,6 +25,7 @@ The first `npm install` also installs the bundled starter site in `site/`.
 | **Elements** | The **+** button in the toolbar adds sections, headings, text, buttons, images, columns and cards. |
 | **Pages** | Add, rename, duplicate and delete pages. Each page is one file in `src/pages`. |
 | **Theme** | With nothing selected, the right panel sets the brand colour (a full 50–950 scale is generated for you), light/dark colours, fonts and corner radius for the whole site. |
+| **Fonts** | Choose the heading, body and code fonts from about 2,000 open-source families, with live previews. It uses Astro's built-in fonts feature: the choice is written to `fonts` in `astro.config.mjs`, and Astro downloads the font and serves it from your own site. |
 | **Content** | The Content tab is a Markdown editor with a live preview and a form for each entry's fields. It reads the collections declared in `src/content.config.ts`. |
 | **Media** | Drop images into the Media section; click one to use it on the selected image. |
 | **Ask AI** | Press ⌘K (Ctrl+K), describe a change, and the assistant edits the files. Each answer is a single undo step. |
@@ -51,7 +52,6 @@ When you add something that other pages already use, you choose **Linked** (shar
 
 The **Inventory** (the list icon next to Components) shows every block, widget and layout, what kind it is, its fields, and which pages use it — including ones nothing uses.
 
-### Keyboard
 ### Forms
 
 The form icon next to Components opens the **form builder**: name the form, pick a starting point (contact, newsletter, sign-up, feedback, quote request or blank), and it is saved under Forms as its own widget. Build it in the right panel — add, remove and reorder fields; each field has a label, a type (text, email, phone, number, date, long text, dropdown, choice, checkbox, file), a placeholder, required on/off, and half-width on/off.
@@ -60,6 +60,7 @@ Submissions are sent to [Formspree](https://formspree.io): paste your form's ID 
 
 The starter's ContactForm and Newsletter have the same **Send to** setting.
 
+### Keyboard
 
 `V` select · `B` browse · `A` add element · `Enter` edit text · `Esc` select parent · `⌫` delete · `⌘D` duplicate · `⌥↑/↓` move · `⌘E` code · `⌘K` AI · `⌘Z` undo
 

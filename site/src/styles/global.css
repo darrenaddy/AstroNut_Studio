@@ -1,8 +1,4 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/bricolage-grotesque";
-@import "@fontsource-variable/fraunces";
-@import "@fontsource-variable/jetbrains-mono";
 @plugin "@tailwindcss/typography";
 
 /* Dark mode is switched by a "dark" class on <html>. */
@@ -10,21 +6,17 @@
 
 /* Design tokens — edit these here, or visually in the editor's Theme panel. */
 @theme {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
-
-  --color-brand-50: #fef8f0;
-  --color-brand-100: #fef1e1;
-  --color-brand-200: #ffe0bd;
-  --color-brand-300: #fccb92;
-  --color-brand-400: #fbb360;
-  --color-brand-500: #f99b2f;
-  --color-brand-600: #f68809;
-  --color-brand-700: #cb720b;
-  --color-brand-800: #a15c0d;
-  --color-brand-900: #7c490d;
-  --color-brand-950: #4a2b08;
+  --color-brand-50: #f1f5fe;
+  --color-brand-100: #e1e9fc;
+  --color-brand-200: #c2d4fc;
+  --color-brand-300: #97b5f5;
+  --color-brand-400: #628ff1;
+  --color-brand-500: #2563eb;
+  --color-brand-600: #1952d1;
+  --color-brand-700: #1545af;
+  --color-brand-800: #113992;
+  --color-brand-900: #13306f;
+  --color-brand-950: #0c1e46;
 
   --radius-card: 1.25rem;
   --radius-button: 9999px;
@@ -32,6 +24,11 @@
 
 /* Semantic colours: these flip automatically between light and dark. */
 @theme inline {
+  /* Fonts are set up in astro.config.mjs; these connect each role to Tailwind's font-display, font-sans and font-mono. */
+  --font-display: var(--font-heading);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-code);
+
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-fg: var(--fg);

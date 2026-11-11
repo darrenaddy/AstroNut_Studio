@@ -7,6 +7,7 @@ import { Group, Modal, Popover, Seg, SelectField, TextField } from './ui';
 import { Code } from './Code';
 import { Media } from './LeftPanel';
 import { SourceTag, WidgetFields } from './Widgets';
+import { FontRoles } from './Fonts';
 
 const FRIENDLY: Record<string, string> = { h1: 'Heading 1', h2: 'Heading 2', h3: 'Heading 3', h4: 'Heading 4', h5: 'Heading 5', h6: 'Heading 6', p: 'Paragraph', a: 'Link', img: 'Image', section: 'Section', div: 'Container', span: 'Text', ul: 'List', ol: 'Numbered list', li: 'List item', button: 'Button', nav: 'Navigation', header: 'Header', footer: 'Footer', main: 'Main content', body: 'Body', form: 'Form', input: 'Input', textarea: 'Text area', label: 'Label', svg: 'Icon', article: 'Article', figure: 'Figure', blockquote: 'Quote', table: 'Table', iframe: 'Embed', details: 'Disclosure', summary: 'Disclosure title', select: 'Dropdown', hr: 'Divider', video: 'Video', aside: 'Aside', strong: 'Bold text', em: 'Italic text', small: 'Small text', time: 'Time', path: 'Icon shape' };
 
@@ -942,14 +943,6 @@ function ComponentPanel() {
 // Nothing selected: page settings + theme
 // ---------------------------------------------------------------------------
 
-const FONTS: [string, string][] = [
-  ['Inter', '"Inter Variable", ui-sans-serif, system-ui, sans-serif'],
-  ['Bricolage Grotesque', '"Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif'],
-  ['Fraunces (serif)', '"Fraunces Variable", ui-serif, Georgia, serif'],
-  ['JetBrains Mono', '"JetBrains Mono Variable", ui-monospace, monospace'],
-  ['System sans', 'ui-sans-serif, system-ui, sans-serif'],
-  ['System serif', 'ui-serif, Georgia, serif'],
-];
 const PRESETS: [string, string][] = [
   ['Iris', '#7445ff'],
   ['Ocean', '#2563eb'],
@@ -1085,7 +1078,6 @@ function PagePanel() {
     for (const [k, v] of Object.entries(scale)) vars[`--color-brand-${k}`] = v;
     putTheme('theme', vars, debounce);
   };
-  const fontOf = (v: string) => FONTS.find((f) => f[1].split(',')[0] === (v || '').split(',')[0].trim())?.[1] || '';
   const scope = canvasTheme === 'dark' ? 'dark' : 'light';
   const sem = theme[scope] || {};
   const radius = parseFloat(theme.theme['--radius-card'] || '1') || 0;
@@ -1162,16 +1154,7 @@ function PagePanel() {
               <p className="sub" style={{ margin: 0 }}>Switch the preview to {scope === 'dark' ? 'light' : 'dark'} mode (☀︎ / ☾ above the page) to edit the other set.</p>
             </Group>
 
-            <Group title="Typography" id="theme-type">
-              <div className="field">
-                <label>Headings</label>
-                <SelectField value={fontOf(theme.theme['--font-display'])} placeholder="Custom" options={FONTS.map(([l, v]) => ({ value: v, label: l }))} onChange={(v) => v && putTheme('theme', { '--font-display': v })} />
-              </div>
-              <div className="field">
-                <label>Body text</label>
-                <SelectField value={fontOf(theme.theme['--font-sans'])} placeholder="Custom" options={FONTS.map(([l, v]) => ({ value: v, label: l }))} onChange={(v) => v && putTheme('theme', { '--font-sans': v })} />
-              </div>
-            </Group>
+            <FontRoles />
 
             <Group title="Shape" id="theme-shape">
               <div className="field">

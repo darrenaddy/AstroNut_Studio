@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Project, httpError, FORM_PRESETS } from './project.mjs';
 import { DevServer } from './dev.mjs';
+import { Fonts } from './fonts.mjs';
 import { Assistant, chatgpt, invalidateModels, listModels, publicSettings, saveProviders, saveSettings, setModel } from './ai.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,11 @@ const broadcast = (ev) => {
 const dev = new DevServer(projectRoot, broadcast);
 project.routes = () => dev.routes;
 const assistant = new Assistant(project);
+const fonts = new Fonts(project, process.env.ASTROPHILE_HOME || path.join(here, '..', '.astrophile'));
+// Astro reads its config once at start-up, so a config change needs the dev server restarted.
+const restartIfConfig = (step) => {
+  if (step?.changes?.some((c) => /^astro\.config\./.test(c.file))) dev.restart().catch(() => {});
+};
 project.on((ev) => broadcast({ ...ev, history: project.historyState() }));
 
 // Tell the UI when files change on disk (from the editor, the AI, or your own code editor).
@@ -75,8 +81,16 @@ api.post('/node', wrap((req) => project.nodeInfo(req.body.file, req.body.ref)));
 api.post('/op', wrap((req) => project.op(req.body)));
 api.post('/placement', wrap((req) => project.placementFor(req.body)));
 api.get('/fields', wrap((req) => ({ fields: project.fieldsOf(String(req.query.file)) })));
-api.post('/undo', wrap(() => ({ step: project.undo()?.label ?? null, history: project.historyState() })));
-api.post('/redo', wrap(() => ({ step: project.redo()?.label ?? null, history: project.historyState() })));
+api.post('/undo', wrap(() => {
+  const step = project.undo();
+  restartIfConfig(step);
+  return { step: step?.label ?? null, history: project.historyState() };
+}));
+api.post('/redo', wrap(() => {
+  const step = project.redo();
+  restartIfConfig(step);
+  return { step: step?.label ?? null, history: project.historyState() };
+}));
 
 // ---- raw files ---------------------------------------------------------------
 api.get('/file', wrap((req) => ({ path: req.query.path, content: project.read(String(req.query.path)) })));
@@ -92,10 +106,21 @@ api.post('/file/duplicate', wrap((req) => ({ file: project.duplicateFile(req.bod
 // ---- pages + components ---------------------------------------------------
 api.post('/pages', wrap((req) => project.createPage(req.body)));
 api.post('/components', wrap((req) => project.createComponent(req.body)));
+api.post('/forms', wrap((req) => project.createForm(req.body)));
+api.get('/forms/presets', wrap(() => Object.entries(FORM_PRESETS).map(([value, p]) => ({ value, label: p.label }))));
 
 // ---- media -------------------------------------------------------------------
 api.post('/media', express.raw({ type: () => true, limit: '60mb' }), wrap((req) => project.saveMedia(decodeURIComponent(String(req.query.name || 'upload')), req.body)));
 api.delete('/media', wrap((req) => project.deleteMedia(String(req.query.file))));
+
+// ---- fonts (declared in astro.config, downloaded and self-hosted by Astro) -----------
+api.get('/fonts', wrap(() => fonts.state()));
+api.get('/fonts/search', wrap((req) => fonts.search({ q: String(req.query.q || ''), category: String(req.query.category || '') })));
+api.put('/fonts', wrap(async (req) => {
+  const out = await fonts.setRole(req.body.role, req.body.font);
+  await dev.restart();
+  return { ...out, ...fonts.state() };
+}));
 
 // ---- theme tokens ----------------------------------------------------------
 api.put('/theme', wrap((req) => project.transaction('Change theme', () => project.setTheme(req.body.scope, req.body.vars))));
@@ -106,8 +131,6 @@ api.put('/content/entry', wrap((req) => project.saveEntry(req.body.file, req.bod
 api.post('/content/entry', wrap((req) => project.createEntry(req.body.collection, req.body.title)));
 api.post('/content/collection', wrap((req) => project.createCollection(req.body.name)));
 
-api.post('/forms', wrap((req) => project.createForm(req.body)));
-api.get('/forms/presets', wrap(() => Object.entries(FORM_PRESETS).map(([value, p]) => ({ value, label: p.label }))));
 // ---- dev server / build ----------------------------------------------------
 api.post('/dev/restart', wrap(async () => {
   await dev.restart();
