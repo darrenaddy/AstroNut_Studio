@@ -1,0 +1,60 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/jetbrains-mono";
+@plugin "@tailwindcss/typography";
+
+/* Dark mode is switched by a "dark" class on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens — edit these here, or visually in the editor's Theme panel. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --color-brand-50: #f3f1ff;
+  --color-brand-100: #e9e5ff;
+  --color-brand-200: #d5cdff;
+  --color-brand-300: #b7a6ff;
+  --color-brand-400: #9375ff;
+  --color-brand-500: #7445ff;
+  --color-brand-600: #6425f5;
+  --color-brand-700: #5517db;
+  --color-brand-800: #4715b3;
+  --color-brand-900: #3c1592;
+  --color-brand-950: #240a63;
+
+  --radius-card: 1.25rem;
+  --radius-button: 9999px;
+}
+
+/* Semantic colours: these flip automatically between light and dark. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+}
+
+:root {
+  --bg: #ffffff;
+  --surface: #f6f5f2;
+  --fg: #16151a;
+  --muted: #6b6876;
+  --line: #e7e5e0;
+}
+
+.dark {
+  --bg: #0e0d12;
+  --surface: #1a1921;
+  --fg: #f4f3f7;
+  --muted: #a09dab;
+  --line: #2b2a34;
+}
+
+html {
+  scroll-behavior: smooth;
+}

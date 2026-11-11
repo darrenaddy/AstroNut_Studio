@@ -1,0 +1,137 @@
+---
+// Pricing3: plan comparison table, horizontally scrollable on small screens.
+---
+
+<section class="bg-bg py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="mx-auto max-w-2xl text-center">
+      <h2 class="font-display text-3xl font-semibold tracking-tight text-fg sm:text-4xl">Compare plans</h2>
+      <p class="mt-4 text-lg leading-relaxed text-muted">Every plan includes the full planning experience. Choose based on how many people and how much control you need.</p>
+    </div>
+
+    <div class="mt-14 overflow-x-auto rounded-card border border-line">
+      <table class="w-full min-w-[720px] border-collapse text-left text-sm">
+        <caption class="sr-only">Feature comparison of the Starter, Team and Business plans</caption>
+        <thead>
+          <tr class="border-b border-line bg-surface">
+            <th scope="col" class="w-2/5 px-6 py-6 align-bottom text-sm font-medium text-muted">Features</th>
+            <th scope="col" class="px-6 py-6 align-bottom">
+              <p class="font-display text-lg font-semibold tracking-tight text-fg">Starter</p>
+              <p class="mt-1 text-sm font-normal text-muted">Free forever</p>
+            </th>
+            <th scope="col" class="bg-brand-50 px-6 py-6 align-bottom dark:bg-brand-950/40">
+              <p class="font-display text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-300">Team</p>
+              <p class="mt-1 text-sm font-normal text-muted">$12 per person / month</p>
+            </th>
+            <th scope="col" class="px-6 py-6 align-bottom">
+              <p class="font-display text-lg font-semibold tracking-tight text-fg">Business</p>
+              <p class="mt-1 text-sm font-normal text-muted">$24 per person / month</p>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">People</th>
+            <td class="px-6 py-4 text-muted">Up to 5</td>
+            <td class="bg-brand-50 px-6 py-4 font-medium text-fg dark:bg-brand-950/40">Unlimited</td>
+            <td class="px-6 py-4 text-muted">Unlimited</td>
+          </tr>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">Active projects</th>
+            <td class="px-6 py-4 text-muted">3</td>
+            <td class="bg-brand-50 px-6 py-4 font-medium text-fg dark:bg-brand-950/40">Unlimited</td>
+            <td class="px-6 py-4 text-muted">Unlimited</td>
+          </tr>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">Board, list and calendar views</th>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+            <td class="bg-brand-50 px-6 py-4 dark:bg-brand-950/40">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+          </tr>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">Timelines and workload planning</th>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-muted opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 12h10" /></svg>
+              <span class="sr-only">Not included</span>
+            </td>
+            <td class="bg-brand-50 px-6 py-4 dark:bg-brand-950/40">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+          </tr>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">Quiet hours and focus mode</th>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-muted opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 12h10" /></svg>
+              <span class="sr-only">Not included</span>
+            </td>
+            <td class="bg-brand-50 px-6 py-4 dark:bg-brand-950/40">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+          </tr>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">Activity history</th>
+            <td class="px-6 py-4 text-muted">30 days</td>
+            <td class="bg-brand-50 px-6 py-4 font-medium text-fg dark:bg-brand-950/40">1 year</td>
+            <td class="px-6 py-4 text-muted">Unlimited</td>
+          </tr>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">Single sign-on and audit log</th>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-muted opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 12h10" /></svg>
+              <span class="sr-only">Not included</span>
+            </td>
+            <td class="bg-brand-50 px-6 py-4 dark:bg-brand-950/40">
+              <svg class="h-5 w-5 text-muted opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 12h10" /></svg>
+              <span class="sr-only">Not included</span>
+            </td>
+            <td class="px-6 py-4">
+              <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+              <span class="sr-only">Included</span>
+            </td>
+          </tr>
+          <tr class="border-b border-line">
+            <th scope="row" class="px-6 py-4 font-medium text-fg">Support</th>
+            <td class="px-6 py-4 text-muted">Help centre</td>
+            <td class="bg-brand-50 px-6 py-4 font-medium text-fg dark:bg-brand-950/40">Email, 1 working day</td>
+            <td class="px-6 py-4 text-muted">Priority, 4 hours</td>
+          </tr>
+          <tr>
+            <th scope="row" class="px-6 py-6">
+              <span class="sr-only">Choose a plan</span>
+            </th>
+            <td class="px-6 py-6">
+              <a href="/contact" class="inline-flex items-center justify-center rounded-button border border-line bg-bg px-4 py-2 text-sm font-semibold text-fg transition hover:border-brand-400">Get started</a>
+            </td>
+            <td class="bg-brand-50 px-6 py-6 dark:bg-brand-950/40">
+              <a href="/contact" class="inline-flex items-center justify-center rounded-button bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">Start free trial</a>
+            </td>
+            <td class="px-6 py-6">
+              <a href="/contact" class="inline-flex items-center justify-center rounded-button border border-line bg-bg px-4 py-2 text-sm font-semibold text-fg transition hover:border-brand-400">Talk to sales</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="mt-6 text-center text-sm text-muted">All prices in US dollars. Annual billing saves 20% on Team and Business.</p>
+  </div>
+</section>

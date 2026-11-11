@@ -1,0 +1,88 @@
+---
+// Bento grid: one large tile with the dashboard screenshot plus four smaller tiles (stat, icon, mini timeline, check-in illustration).
+---
+
+<section class="bg-bg py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="mx-auto max-w-2xl text-center">
+      <p class="text-sm font-semibold tracking-widest text-brand-600 uppercase dark:text-brand-400">Inside Halcyon</p>
+      <h2 class="mt-4 font-display text-4xl font-semibold tracking-tight text-balance text-fg sm:text-5xl">A workspace that respects your attention</h2>
+      <p class="mt-5 text-lg leading-8 text-pretty text-muted">Five small ideas that add up to a noticeably calmer week.</p>
+    </div>
+
+    <div class="mt-14 grid gap-5 lg:grid-cols-3">
+      <div class="flex flex-col overflow-hidden rounded-card border border-line bg-surface lg:col-span-2 lg:row-span-2">
+        <div class="p-8 sm:p-10">
+          <h3 class="font-display text-2xl font-semibold tracking-tight text-fg sm:text-3xl">The whole project on one screen</h3>
+          <p class="mt-3 max-w-lg text-base leading-7 text-muted">This week's plan, what shipped, and what is at risk. Open Halcyon and you know where things stand before your coffee cools.</p>
+        </div>
+        <div class="mt-auto pl-8 sm:pl-10">
+          <img src="/media/app-dashboard.svg" alt="Halcyon dashboard with the weekly plan, project health and upcoming milestones" width="1440" height="900" class="w-full rounded-tl-xl border-t border-l border-line shadow-2xl shadow-brand-950/15" />
+        </div>
+      </div>
+
+      <div class="relative overflow-hidden rounded-card bg-brand-600 p-8">
+        <div class="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-brand-400/50 blur-2xl" aria-hidden="true"></div>
+        <p class="relative font-display text-6xl font-semibold tracking-tight text-white">6 hrs</p>
+        <h3 class="relative mt-4 font-display text-xl font-semibold tracking-tight text-white">Focus time, returned</h3>
+        <p class="relative mt-2 text-base leading-7 text-white/80">What the average person wins back each week once the pings and status meetings stop.</p>
+      </div>
+
+      <div class="rounded-card border border-line bg-bg p-8">
+        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
+          </svg>
+        </div>
+        <h3 class="mt-6 font-display text-xl font-semibold tracking-tight text-fg">Quiet Hours by default</h3>
+        <p class="mt-2 text-base leading-7 text-muted">Nothing reaches you outside working hours unless a teammate marks it urgent and explains why.</p>
+      </div>
+
+      <div class="rounded-card border border-line bg-bg p-8">
+        <div class="space-y-3 rounded-xl border border-line bg-surface p-4" aria-hidden="true">
+          <div class="flex items-center gap-3">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-brand-600"></span>
+            <div class="h-2.5 w-2/3 rounded-full bg-brand-600"></div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-brand-400"></span>
+            <div class="ml-8 h-2.5 w-1/2 rounded-full bg-brand-400"></div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-brand-300"></span>
+            <div class="ml-20 h-2.5 w-2/5 rounded-full bg-brand-300"></div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-line"></span>
+            <div class="ml-32 h-2.5 w-1/4 rounded-full bg-line"></div>
+          </div>
+        </div>
+        <h3 class="mt-6 font-display text-xl font-semibold tracking-tight text-fg">Timelines that flex</h3>
+        <p class="mt-2 text-base leading-7 text-muted">Move one bar and dependent work shifts with it. No rebuilding the schedule by hand.</p>
+      </div>
+
+      <div class="grid items-center gap-8 rounded-card border border-line bg-surface p-8 sm:grid-cols-2 lg:col-span-2">
+        <div>
+          <h3 class="font-display text-xl font-semibold tracking-tight text-fg">Check-ins that take two minutes</h3>
+          <p class="mt-2 text-base leading-7 text-muted">Two questions, answered whenever suits you. The stand-up becomes something you read, not something you attend.</p>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 rounded-xl border border-line bg-bg p-3 shadow-sm">
+            <img src="/media/avatar-4.svg" alt="Portrait of Priya, a product designer" width="36" height="36" class="h-9 w-9 shrink-0 rounded-full object-cover" />
+            <div>
+              <p class="text-sm font-semibold text-fg">Priya</p>
+              <p class="text-sm leading-6 text-muted">Onboarding flow is ready for review. Nothing blocking.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 rounded-xl border border-line bg-bg p-3 shadow-sm">
+            <img src="/media/avatar-5.svg" alt="Portrait of Marcus, an engineer" width="36" height="36" class="h-9 w-9 shrink-0 rounded-full object-cover" />
+            <div>
+              <p class="text-sm font-semibold text-fg">Marcus</p>
+              <p class="text-sm leading-6 text-muted">Billing migration is half done. Need a decision on invoices by Thursday.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,22 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import BlogCard from '../../components/blog/BlogCard.astro';
+import Newsletter from '../../components/forms/Newsletter.astro';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<Layout title="Blog — Halcyon">
+  <section class="pt-24 pb-20 sm:pt-32">
+    <div class="mx-auto max-w-6xl px-6">
+      <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">The Halcyon blog</p>
+      <h1 class="mt-4 max-w-3xl font-display text-5xl font-semibold tracking-tight sm:text-6xl">Notes on working calmly</h1>
+      <p class="mt-6 max-w-2xl text-lg text-muted">Essays, experiments and product news from the team behind Halcyon.</p>
+      <div class="mt-14 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        {posts.map((post) => <BlogCard post={post} />)}
+      </div>
+    </div>
+  </section>
+  <Newsletter />
+</Layout>

@@ -1,0 +1,24 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Metrics from '../components/metrics/Metrics.astro';
+import Team from '../components/team/Team.astro';
+import CTA2 from '../components/cta/CTA2.astro';
+---
+
+<Layout title="About — Halcyon">
+  <section class="pt-24 pb-12 sm:pt-32">
+    <div class="mx-auto max-w-4xl px-6">
+      <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">About us</p>
+      <h1 class="mt-4 font-display text-5xl font-semibold tracking-tight sm:text-7xl">We think work should feel quieter.</h1>
+      <p class="mt-8 text-xl leading-relaxed text-muted">Halcyon started in 2021 as an internal tool at a twelve-person studio that was tired of planning its weeks in five different apps. Today a small, fully remote team builds it for thousands of teams who feel the same way.</p>
+    </div>
+  </section>
+  <section class="pb-8">
+    <div class="mx-auto max-w-6xl px-6">
+      <img src="/media/abstract-3.svg" alt="Abstract artwork in warm reds and oranges" class="aspect-[21/9] w-full rounded-card object-cover" />
+    </div>
+  </section>
+  <Metrics />
+  <Team />
+  <CTA2 />
+</Layout>

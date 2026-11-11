@@ -1,0 +1,45 @@
+---
+// Renders a single component or layout on its own, for the editor's canvas.
+// This file lives in the editor, not in your site — it is only routed in dev.
+export function getStaticPaths() {
+  const files = import.meta.glob('/src/{components,layouts}/**/*.astro');
+  return Object.keys(files).map((key) => ({
+    params: { id: key.replace(/^\/src\//, '').replace(/\.astro$/, '').split('/').join('~') },
+  }));
+}
+import.meta.glob('/src/styles/*.css', { eager: true });
+const files = import.meta.glob('/src/{components,layouts}/**/*.astro');
+const { id } = Astro.params;
+const key = '/src/' + String(id).split('~').join('/') + '.astro';
+const mod = files[key] ? await files[key]() : null;
+const Comp = mod?.default;
+const isLayout = key.startsWith('/src/layouts/');
+---
+
+{
+  !Comp ? (
+    <html lang="en">
+      <body style="font-family:system-ui;padding:3rem;color:#666">Component not found: {key}</body>
+    </html>
+  ) : isLayout ? (
+    <Comp title="Layout preview">
+      <div style="margin:2rem auto;max-width:56rem;padding:4rem 2rem;border:2px dashed #8b5cf6;border-radius:16px;text-align:center;font-family:system-ui;color:#8b5cf6;background:rgba(139,92,246,.06)">
+        <strong style="display:block;font-size:1rem">&lt;slot /&gt;</strong>
+        <span style="font-size:.875rem;opacity:.8">Each page's content is placed here</span>
+      </div>
+    </Comp>
+  ) : (
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{id}</title>
+      </head>
+      <body class="bg-bg text-fg antialiased">
+        <Comp>
+          <p style="padding:1rem;border:1px dashed currentColor;opacity:.5;border-radius:8px;font-family:system-ui;font-size:.875rem">slot content</p>
+        </Comp>
+      </body>
+    </html>
+  )
+}

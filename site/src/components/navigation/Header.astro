@@ -1,0 +1,55 @@
+---
+// Sticky translucent top bar with wordmark, primary links, sign-in and a "Start free" pill. Mobile uses a <details> menu.
+---
+
+<header class="sticky top-0 z-50 border-b border-line bg-bg/80 backdrop-blur">
+  <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-6">
+    <a href="/" class="flex items-center gap-2.5" aria-label="Halcyon home">
+      <span class="flex h-8 w-8 items-center justify-center rounded-button bg-brand-600 text-white shadow-sm shadow-brand-600/30">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 9c3-3 6-3 9 0s6 3 9 0" />
+          <path d="M3 15c3-3 6-3 9 0s6 3 9 0" />
+        </svg>
+      </span>
+      <span class="font-display text-xl font-semibold tracking-tight text-fg">Halcyon</span>
+    </a>
+
+    <nav class="hidden items-center gap-8 md:flex" aria-label="Primary">
+      <a href="/#features" class="text-sm font-medium text-muted transition-colors hover:text-fg">Product</a>
+      <a href="/pricing" class="text-sm font-medium text-muted transition-colors hover:text-fg">Pricing</a>
+      <a href="/blog" class="text-sm font-medium text-muted transition-colors hover:text-fg">Blog</a>
+      <a href="/about" class="text-sm font-medium text-muted transition-colors hover:text-fg">About</a>
+    </nav>
+
+    <div class="hidden items-center gap-5 md:flex">
+      <a href="/contact" class="text-sm font-medium text-muted transition-colors hover:text-fg">Sign in</a>
+      <a href="/contact" class="rounded-button bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/25 transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500">Start free</a>
+    </div>
+
+    <details class="group relative md:hidden">
+      <summary class="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-button border border-line text-fg transition-colors hover:bg-surface [&::-webkit-details-marker]:hidden" aria-label="Toggle menu">
+        <svg class="h-5 w-5 group-open:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 7h16" />
+          <path d="M4 12h16" />
+          <path d="M4 17h16" />
+        </svg>
+        <svg class="hidden h-5 w-5 group-open:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12" />
+          <path d="M18 6L6 18" />
+        </svg>
+      </summary>
+      <div class="absolute right-0 top-full mt-3 w-64 rounded-card border border-line bg-bg p-3 shadow-xl shadow-brand-950/10">
+        <nav class="flex flex-col" aria-label="Mobile">
+          <a href="/#features" class="rounded-button px-4 py-2.5 text-base font-medium text-fg hover:bg-surface">Product</a>
+          <a href="/pricing" class="rounded-button px-4 py-2.5 text-base font-medium text-fg hover:bg-surface">Pricing</a>
+          <a href="/blog" class="rounded-button px-4 py-2.5 text-base font-medium text-fg hover:bg-surface">Blog</a>
+          <a href="/about" class="rounded-button px-4 py-2.5 text-base font-medium text-fg hover:bg-surface">About</a>
+        </nav>
+        <div class="mt-3 flex flex-col gap-2 border-t border-line pt-3">
+          <a href="/contact" class="rounded-button px-4 py-2.5 text-center text-base font-medium text-muted hover:text-fg">Sign in</a>
+          <a href="/contact" class="rounded-button bg-brand-600 px-4 py-2.5 text-center text-base font-semibold text-white hover:bg-brand-700">Start free</a>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>

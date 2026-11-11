@@ -1,0 +1,33 @@
+---
+// Embed — heading with a responsive iframe embed in a bordered frame.
+---
+
+<section class="bg-bg py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="mx-auto max-w-2xl text-center">
+      <p class="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">Find us</p>
+      <h2 class="mt-4 font-display text-4xl font-semibold tracking-tight text-fg sm:text-5xl">Come and say hello</h2>
+      <p class="mt-5 text-lg leading-relaxed text-muted">Our studio sits a short walk from the river in central London. The kettle is usually on.</p>
+    </div>
+
+    <div class="mx-auto mt-14 max-w-5xl">
+      <div class="rounded-card border border-line bg-surface p-2 shadow-xl shadow-brand-950/5 sm:p-3">
+        <div class="overflow-hidden rounded-2xl border border-line bg-bg">
+          <iframe
+            src="https://www.openstreetmap.org/export/embed.html?bbox=-0.14%2C51.50%2C-0.10%2C51.52&layer=mapnik"
+            title="Map showing the Halcyon studio in central London"
+            loading="lazy"
+            class="block aspect-video w-full border-0"
+          ></iframe>
+        </div>
+      </div>
+      <div class="mt-5 flex items-start justify-center gap-2 text-sm text-muted">
+        <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 11v5M12 8v.01"></path>
+        </svg>
+        <p class="max-w-xl">This frame works with any embed URL. Swap in a map, a video, a calendar or a form and it will keep the same tidy proportions.</p>
+      </div>
+    </div>
+  </div>
+</section>

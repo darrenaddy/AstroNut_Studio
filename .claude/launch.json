@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "astrolabe",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/index.mjs"],
+      "port": 4600
+    },
+    {
+      "name": "astrolabe-mock-ai",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["ASTROLABE_MOCK_AI=1", "PORT=4610", "ASTROLABE_SITE_PORT=4651", "node", "server/index.mjs"],
+      "port": 4610
+    }
+  ]
+}

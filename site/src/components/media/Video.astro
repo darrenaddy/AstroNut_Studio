@@ -1,0 +1,36 @@
+---
+// Video — heading with a framed 16:9 video placeholder, play button and caption.
+---
+
+<section class="bg-bg py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="mx-auto max-w-2xl text-center">
+      <p class="text-sm font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">Product tour</p>
+      <h2 class="mt-4 font-display text-4xl font-semibold tracking-tight text-fg sm:text-5xl">See a whole week in two minutes</h2>
+      <p class="mt-5 text-lg leading-relaxed text-muted">Watch how a six-person studio plans Monday, stays on course midweek and wraps up Friday without a single status meeting.</p>
+    </div>
+
+    <figure class="mx-auto mt-14 max-w-5xl">
+      <div class="rounded-card border border-line bg-surface p-2 shadow-xl shadow-brand-950/5 sm:p-3">
+        <a href="#" class="group relative block aspect-video overflow-hidden rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
+          <img src="/media/abstract-2.svg" alt="Soft gradient artwork used as the cover for the Halcyon product tour video" class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+          <span class="absolute inset-0 bg-brand-950/20 transition group-hover:bg-brand-950/30" aria-hidden="true"></span>
+          <span class="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-brand-600 shadow-2xl ring-8 ring-white/25 transition duration-300 group-hover:scale-110 sm:h-24 sm:w-24">
+            <svg class="ml-1 h-8 w-8" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 4.5v15l12-7.5z"></path>
+            </svg>
+            <span class="sr-only">Play the product tour</span>
+          </span>
+          <span class="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-button bg-brand-950/60 px-3.5 py-1.5 text-sm font-medium text-white backdrop-blur">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 7v5l3 2"></path>
+            </svg>
+            <span>2:14</span>
+          </span>
+        </a>
+      </div>
+      <figcaption class="mt-5 text-center text-sm text-muted">A week in Halcyon, narrated by Maya Okafor, Head of Product.</figcaption>
+    </figure>
+  </div>
+</section>
