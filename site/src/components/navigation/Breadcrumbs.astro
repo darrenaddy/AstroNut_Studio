@@ -1,0 +1,21 @@
+---
+// Breadcrumbs — the trail back to Home ("Home / Blog / This post").
+// It works the trail out from the page's own address, so there is nothing to
+// fill in per page. Built on the astro-breadcrumbs package.
+import { Breadcrumbs as Trail } from 'astro-breadcrumbs';
+
+interface Props {
+  homeLabel?: string;
+  wording?: 'capitalized' | 'sentence' | 'lower';
+  showCurrentPage?: boolean;
+}
+const { homeLabel = "Home", wording = "capitalized", showCurrentPage = true } = Astro.props;
+---
+
+<div class="mx-auto max-w-6xl px-6 pt-8">
+  <div class="text-sm text-muted [&_a]:transition [&_a:hover]:text-fg [&_li]:flex [&_li]:items-center [&_li]:gap-2 [&_ol]:m-0 [&_ol]:flex [&_ol]:list-none [&_ol]:flex-wrap [&_ol]:items-center [&_ol]:gap-2 [&_ol]:p-0 [&_[aria-current]]:font-medium [&_[aria-current]]:text-fg">
+    <Trail indexText={homeLabel} linkTextFormat={wording} excludeCurrentPage={!showCurrentPage} ariaLabel="Breadcrumbs">
+      <span slot="separator" class="text-muted opacity-50">/</span>
+    </Trail>
+  </div>
+</div>

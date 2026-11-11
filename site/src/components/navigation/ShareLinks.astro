@@ -1,0 +1,22 @@
+---
+// Share links — "share this page" buttons that point at whatever page they sit on.
+interface Props {
+  label?: string;
+  showEmail?: boolean;
+}
+const { label = "Share this page", showEmail = true } = Astro.props;
+
+// Astro.url is the address of the page being built. Set `site` in astro.config.mjs
+// so the shared links use your real domain rather than localhost.
+const pageUrl = encodeURIComponent(new URL(Astro.url.pathname, Astro.site ?? Astro.url).href);
+---
+
+<div class="mx-auto max-w-3xl px-6 py-10">
+  <div class="flex flex-wrap items-center gap-3 border-t border-line pt-8">
+    <p class="mr-2 text-sm font-semibold text-fg">{label}</p>
+    <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${pageUrl}`} target="_blank" rel="noopener" class="rounded-button border border-line px-4 py-2 text-sm font-medium text-muted transition hover:bg-surface hover:text-fg">LinkedIn</a>
+    <a href={`https://x.com/intent/post?url=${pageUrl}`} target="_blank" rel="noopener" class="rounded-button border border-line px-4 py-2 text-sm font-medium text-muted transition hover:bg-surface hover:text-fg">X</a>
+    <a href={`https://www.facebook.com/sharer/sharer.php?u=${pageUrl}`} target="_blank" rel="noopener" class="rounded-button border border-line px-4 py-2 text-sm font-medium text-muted transition hover:bg-surface hover:text-fg">Facebook</a>
+    {showEmail && <a href={`mailto:?body=${pageUrl}`} class="rounded-button border border-line px-4 py-2 text-sm font-medium text-muted transition hover:bg-surface hover:text-fg">Email</a>}
+  </div>
+</div>

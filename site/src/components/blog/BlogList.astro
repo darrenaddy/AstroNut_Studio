@@ -1,12 +1,33 @@
 ---
-// Lists the newest posts from the "blog" content collection.
-// Add or edit posts in the editor's Content tab — this list updates by itself.
+// Blog list — shows posts from the "blog" content collection.
+// Add or edit posts in the editor's Content tab; this list updates by itself.
+// Each placement can choose how many posts to show, their order and a tag to filter by.
 import { getCollection } from 'astro:content';
 import BlogCard from './BlogCard.astro';
 
-const { limit = 3 } = Astro.props;
+interface Props {
+  eyebrow?: string;
+  title?: string;
+  limit?: number;
+  order?: 'newest' | 'oldest' | 'title';
+  tag?: string;
+  buttonLabel?: string;
+  buttonLink?: string;
+}
+const {
+  eyebrow = "From the blog",
+  title = "Notes on working calmly",
+  limit = 3,
+  order = "newest",
+  tag = "",
+  buttonLabel = "All posts",
+  buttonLink = "/blog",
+} = Astro.props;
+
+const wanted = tag.trim().toLowerCase();
 const posts = (await getCollection('blog', ({ data }) => !data.draft))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .filter((post) => !wanted || post.data.tags.some((t) => t.toLowerCase() === wanted))
+  .sort((a, b) => (order === 'title' ? a.data.title.localeCompare(b.data.title) : order === 'oldest' ? a.data.pubDate.valueOf() - b.data.pubDate.valueOf() : b.data.pubDate.valueOf() - a.data.pubDate.valueOf()))
   .slice(0, limit);
 ---
 
@@ -14,13 +35,14 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft))
   <div class="mx-auto max-w-6xl px-6">
     <div class="flex flex-wrap items-end justify-between gap-6">
       <div>
-        <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">From the blog</p>
-        <h2 class="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">Notes on working calmly</h2>
+        <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">{eyebrow}</p>
+        <h2 class="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h2>
       </div>
-      <a href="/blog" class="rounded-button border border-line px-5 py-2.5 text-sm font-semibold hover:bg-surface">All posts</a>
+      <a href={buttonLink} class="rounded-button border border-line px-5 py-2.5 text-sm font-semibold hover:bg-surface">{buttonLabel}</a>
     </div>
     <div class="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
       {posts.map((post) => <BlogCard post={post} />)}
     </div>
+    {posts.length === 0 && <p class="mt-12 rounded-card border border-dashed border-line p-10 text-center text-muted">No posts match yet.</p>}
   </div>
 </section>

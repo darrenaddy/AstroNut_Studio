@@ -1,0 +1,30 @@
+---
+// Table of contents — a list of the headings on the page it sits on.
+// The page hands over its headings (Astro collects them when it renders Markdown):
+//   const { Content, headings } = await render(post);
+//   <TableOfContents headings={headings} />
+interface Props {
+  title?: string;
+  deepest?: number;
+  headings: { depth: number; slug: string; text: string }[];
+}
+const { title = "On this page", deepest = 3, headings } = Astro.props;
+const list = (headings || []).filter((h) => h.depth >= 2 && h.depth <= deepest);
+---
+
+{
+  list.length > 1 && (
+    <nav aria-label={title} class="mx-auto mt-10 max-w-3xl px-6">
+      <div class="rounded-card border border-line bg-surface p-6">
+        <p class="text-sm font-semibold uppercase tracking-widest text-muted">{title}</p>
+        <ul class="mt-4 space-y-2">
+          {list.map((h) => (
+            <li class={h.depth > 2 ? 'pl-4 text-sm' : ''}>
+              <a href={`#${h.slug}`} class="text-fg underline-offset-4 hover:text-brand-600 hover:underline">{h.text}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </nav>
+  )
+}

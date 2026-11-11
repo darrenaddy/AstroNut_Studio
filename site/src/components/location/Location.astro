@@ -1,0 +1,89 @@
+---
+// Location — where to find the business: address, contact details, opening hours and a map.
+// The map is drawn by Google Maps from the address below; change the address and it follows.
+interface Props {
+  eyebrow?: string;
+  title?: string;
+  text?: string;
+  businessName?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  showMap?: boolean;
+  mapZoom?: number;
+  hours?: Array<Record<string, any>>;
+}
+const {
+  eyebrow = "Visit us",
+  title = "Come and say hello",
+  text = "We are a short walk from Farringdon station. Drop in for a coffee and a walkthrough any weekday.",
+  businessName = "Halcyon Labs",
+  address = "14 Lantern Yard, Clerkenwell, London EC1R 4QT",
+  phone = "+44 20 7946 0321",
+  email = "hello@halcyon.app",
+  showMap = true,
+  mapZoom = 15,
+  hours = [
+    { days: "Monday to Thursday", hours: "9am – 6pm" },
+    { days: "Friday", hours: "9am – 4pm" },
+    { days: "Saturday and Sunday", hours: "Closed" },
+  ],
+} = Astro.props;
+
+const place = encodeURIComponent(`${businessName}, ${address}`);
+const mapUrl = `https://www.google.com/maps?q=${place}&z=${mapZoom}&output=embed`;
+const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place}`;
+---
+
+<section class="bg-bg py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="grid gap-12 lg:grid-cols-2 lg:gap-16">
+      <div>
+        <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">{eyebrow}</p>
+        <h2 class="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h2>
+        <p class="mt-5 max-w-md text-lg leading-relaxed text-muted">{text}</p>
+
+        <dl class="mt-10 space-y-6">
+          <div>
+            <dt class="text-sm font-semibold text-fg">{businessName}</dt>
+            <dd class="mt-1 text-muted">{address}</dd>
+          </div>
+          <div class="flex flex-wrap gap-x-10 gap-y-4">
+            <div>
+              <dt class="text-sm font-semibold text-fg">Phone</dt>
+              <dd class="mt-1"><a href={`tel:${phone.replace(/[^+\d]/g, '')}`} class="text-muted hover:text-brand-600">{phone}</a></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-semibold text-fg">Email</dt>
+              <dd class="mt-1"><a href={`mailto:${email}`} class="text-muted hover:text-brand-600">{email}</a></dd>
+            </div>
+          </div>
+        </dl>
+
+        <div class="mt-10 rounded-card border border-line bg-surface p-6">
+          <p class="text-sm font-semibold text-fg">Opening hours</p>
+          <ul class="mt-4 divide-y divide-line">
+            {
+              hours.map((item) => (
+                <li class="flex items-center justify-between gap-6 py-2.5 text-sm">
+                  <span class="text-muted">{item.days}</span>
+                  <span class="font-medium text-fg">{item.hours}</span>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <a href={directionsUrl} target="_blank" rel="noopener" class="mt-8 inline-flex items-center rounded-button bg-brand-600 px-6 py-3 font-semibold text-white transition hover:bg-brand-700">Get directions</a>
+      </div>
+
+      {
+        showMap && (
+          <div class="overflow-hidden rounded-card border border-line bg-surface shadow-sm">
+            <iframe src={mapUrl} title={`Map showing ${businessName}`} loading="lazy" referrerpolicy="no-referrer-when-downgrade" class="h-full min-h-[26rem] w-full" />
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>

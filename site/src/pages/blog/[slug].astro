@@ -3,6 +3,9 @@
 // entry in the "blog" collection. Edit the posts themselves in the Content tab.
 import { getCollection, render } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
+import Breadcrumbs from '../../components/navigation/Breadcrumbs.astro';
+import ShareLinks from '../../components/navigation/ShareLinks.astro';
+import TableOfContents from '../../components/blog/TableOfContents.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
@@ -10,12 +13,13 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 const date = post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
 <Layout title={`${post.data.title} — Halcyon`} description={post.data.description}>
-  <article class="pt-20 pb-24 sm:pt-28">
+  <Breadcrumbs />
+  <article class="pt-12 pb-10 sm:pt-16">
     <header class="mx-auto max-w-3xl px-6">
       <a href="/blog" class="text-sm font-semibold text-brand-600">← All posts</a>
       <h1 class="mt-6 font-display text-4xl font-semibold tracking-tight sm:text-6xl">{post.data.title}</h1>
@@ -29,8 +33,10 @@ const date = post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', mo
         </div>
       )
     }
+    <TableOfContents headings={headings} />
     <div class="prose prose-lg mx-auto mt-12 max-w-3xl px-6 dark:prose-invert prose-headings:font-display prose-headings:tracking-tight prose-a:text-brand-600">
       <Content />
     </div>
   </article>
+  <ShareLinks />
 </Layout>

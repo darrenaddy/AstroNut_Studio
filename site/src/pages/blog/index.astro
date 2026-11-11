@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
+import Breadcrumbs from '../../components/navigation/Breadcrumbs.astro';
 import BlogCard from '../../components/blog/BlogCard.astro';
 import Newsletter from '../../components/forms/Newsletter.astro';
 
@@ -8,6 +9,7 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a, 
 ---
 
 <Layout title="Blog — Halcyon">
+  <Breadcrumbs />
   <section class="pt-24 pb-20 sm:pt-32">
     <div class="mx-auto max-w-6xl px-6">
       <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">The Halcyon blog</p>

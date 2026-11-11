@@ -16,6 +16,7 @@
     "@tailwindcss/typography": "latest",
     "@tailwindcss/vite": "latest",
     "astro": "latest",
+    "astro-breadcrumbs": "^3.4.2",
     "tailwindcss": "latest"
   }
 }
