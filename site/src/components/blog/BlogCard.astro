@@ -7,7 +7,7 @@ const date = post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', mo
 ---
 
 <article class="group flex flex-col overflow-hidden rounded-card border border-line bg-bg transition hover:-translate-y-1 hover:shadow-xl">
-  <a href={`/blog/${post.id}`} class="block aspect-[16/9] overflow-hidden bg-surface">
+  <a href={`/blog/${post.id}`} aria-label={post.data.title} class="block aspect-[16/9] overflow-hidden bg-surface">
     {post.data.heroImage && <SmartImage src={post.data.heroImage} sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt="" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />}
   </a>
   <div class="flex flex-1 flex-col p-6">

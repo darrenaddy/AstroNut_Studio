@@ -15,6 +15,7 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a, 
       <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">The Halcyon blog</p>
       <h1 class="mt-4 max-w-3xl font-display text-5xl font-semibold tracking-tight sm:text-6xl">Notes on working calmly</h1>
       <p class="mt-6 max-w-2xl text-lg text-muted">Essays, experiments and product news from the team behind Halcyon.</p>
+      <h2 class="sr-only">All posts</h2>
       <div class="mt-14 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => <BlogCard post={post} />)}
       </div>
