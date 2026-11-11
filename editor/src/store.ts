@@ -37,9 +37,17 @@ export const BREAKPOINTS = [
 type Toast = { id: number; text: string; kind: 'info' | 'error' | 'ok' };
 type ChatItem = { role: 'user' | 'assistant'; text: string; thinking?: string; tools?: any[]; error?: string; code?: string; changed?: string[]; pending?: boolean; stopped?: boolean; models?: any[]; providers?: any[]; current?: any };
 
+// The app used to be called Astrolabe: carry saved preferences over to the new name once.
+try {
+  const legacy = 'astro' + 'labe:';
+  for (const k of Object.keys(localStorage)) {
+    if (k.startsWith(legacy) && localStorage.getItem('astrophile:' + k.slice(legacy.length)) === null) localStorage.setItem('astrophile:' + k.slice(legacy.length), localStorage.getItem(k)!);
+  }
+} catch {}
+
 const saved = (k: string, d: any) => {
   try {
-    const v = localStorage.getItem('astrolabe:' + k);
+    const v = localStorage.getItem('astrophile:' + k);
     return v == null ? d : JSON.parse(v);
   } catch {
     return d;
@@ -47,7 +55,7 @@ const saved = (k: string, d: any) => {
 };
 const save = (k: string, v: any) => {
   try {
-    localStorage.setItem('astrolabe:' + k, JSON.stringify(v));
+    localStorage.setItem('astrophile:' + k, JSON.stringify(v));
   } catch {}
 };
 
@@ -103,7 +111,7 @@ export const setIframe = (el: HTMLIFrameElement | null) => {
   iframe = el;
 };
 export const getIframe = () => iframe;
-const cmd = (type: string, data: any = {}) => iframe?.contentWindow?.postMessage({ __astrolabe_cmd: true, type, ...data }, '*');
+const cmd = (type: string, data: any = {}) => iframe?.contentWindow?.postMessage({ __astrophile_cmd: true, type, ...data }, '*');
 
 let opChain: Promise<any> = Promise.resolve();
 let readyCount = 0;
@@ -128,7 +136,7 @@ export const useStore = create<State>((set, get) => {
   function fileForPath(path: string): string | null {
     const data = get().data;
     if (!data) return null;
-    const m = /^\/__astrolabe\/c\/([^/?#]+)/.exec(path);
+    const m = /^\/__astrophile\/c\/([^/?#]+)/.exec(path);
     if (m) return 'src/' + decodeURIComponent(m[1]).split('~').join('/') + '.astro';
     const clean = path.replace(/[?#].*$/, '').replace(/\/+$/, '') || '/';
     const exact = data.pages.find((p: any) => p.route === clean);
@@ -306,7 +314,7 @@ export const useStore = create<State>((set, get) => {
       actions.toast('This is a dynamic page — it needs content to preview. Open it from a link on another page.', 'info');
     },
     openComponent(c: any) {
-      actions.navigate('/__astrolabe/c/' + c.previewId);
+      actions.navigate('/__astrophile/c/' + c.previewId);
     },
     reloadCanvas() {
       set((s) => ({ reloadKey: s.reloadKey + 1, ready: false }));
@@ -409,7 +417,7 @@ export const useStore = create<State>((set, get) => {
           break;
         }
         case 'key':
-          window.dispatchEvent(new CustomEvent('astrolabe-key', { detail: m }));
+          window.dispatchEvent(new CustomEvent('astrophile-key', { detail: m }));
           break;
         case 'drop':
           if (m.data?.image) {
@@ -781,5 +789,5 @@ export const useStore = create<State>((set, get) => {
 });
 
 export const act = () => useStore.getState() as any;
-(window as any).__astrolabe = useStore;
+(window as any).__astrophile = useStore;
 export const EMPTY: any[] = [];

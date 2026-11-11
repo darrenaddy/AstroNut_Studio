@@ -109,7 +109,7 @@ export function Dropdown({ label, small, options, value, onChange, tip }: { labe
 }
 
 export function Group({ title, children, defaultOpen = true, action, id }: { title: string; children: ReactNode; defaultOpen?: boolean; action?: ReactNode; id?: string }) {
-  const key = 'astrolabe:group:' + (id || title);
+  const key = 'astrophile:group:' + (id || title);
   const [open, setOpen] = useState(() => {
     const v = localStorage.getItem(key);
     return v == null ? defaultOpen : v === '1';

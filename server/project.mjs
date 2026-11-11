@@ -943,7 +943,7 @@ function safe(fn, fallback) {
   try {
     return fn();
   } catch (e) {
-    console.error('[astrolabe]', e.message);
+    console.error('[astrophile]', e.message);
     return fallback;
   }
 }

@@ -1,6 +1,6 @@
 // Widgets: components whose content comes from named fields.
 //
-// Nothing here is Astrolabe-specific on disk. A "field" is an ordinary Astro
+// Nothing here is Astrophile Studio-specific on disk. A "field" is an ordinary Astro
 // prop with a default value:
 //
 //   const { title = "Calm software", image = "/media/a.svg" } = Astro.props;

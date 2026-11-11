@@ -20,12 +20,12 @@ try {
 
 function bridge() {
   return {
-    name: 'astrolabe-bridge',
+    name: 'astrophile-bridge',
     hooks: {
       'astro:config:setup'({ injectScript, injectRoute, updateConfig, command }) {
         if (command !== 'dev') return;
         injectScript('head-inline', fs.readFileSync(path.join(here, 'bridge.js'), 'utf8'));
-        injectRoute({ pattern: '/__astrolabe/c/[id]', entrypoint: path.join(here, 'preview/component.astro'), prerender: true });
+        injectRoute({ pattern: '/__astrophile/c/[id]', entrypoint: path.join(here, 'preview/component.astro'), prerender: true });
         updateConfig({ vite: { server: { fs: { allow: [here, root] } } } });
       },
       // Astro's own list of routes — the editor uses it for its page list.
@@ -40,7 +40,7 @@ function bridge() {
 try {
   if (command === 'build') {
     await astro.build({ root, logLevel: 'info' });
-    console.log('__ASTROLABE_BUILD_DONE__');
+    console.log('__ASTROPHILE_BUILD_DONE__');
     process.exit(0);
   } else {
     const server = await astro.dev({
@@ -49,7 +49,7 @@ try {
       devToolbar: { enabled: true },
       integrations: [bridge()],
     });
-    console.log(`__ASTROLABE_READY__ ${server.address.port}`);
+    console.log(`__ASTROPHILE_READY__ ${server.address.port}`);
     const stop = async () => {
       await server.stop().catch(() => {});
       process.exit(0);

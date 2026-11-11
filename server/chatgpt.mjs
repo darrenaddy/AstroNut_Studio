@@ -10,8 +10,8 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 
-const ISSUER = (process.env.ASTROLABE_OPENAI_AUTH_BASE || 'https://auth.openai.com').replace(/\/+$/, '');
-export const API_BASE = (process.env.ASTROLABE_OPENAI_API_BASE || 'https://api.openai.com/v1').replace(/\/+$/, '');
+const ISSUER = (process.env.ASTROPHILE_OPENAI_AUTH_BASE || 'https://auth.openai.com').replace(/\/+$/, '');
+export const API_BASE = (process.env.ASTROPHILE_OPENAI_API_BASE || 'https://api.openai.com/v1').replace(/\/+$/, '');
 const AUTHORIZE = ISSUER + '/api/accounts/authorize';
 const TOKEN = ISSUER + '/api/accounts/oauth/token';
 const RESOURCE = 'https://api.openai.com/v1';
@@ -105,7 +105,7 @@ export class ChatGPTAuth {
       resource: RESOURCE,
       ext_agent_host_id: this.hostId(),
     });
-    if (!issuedClient) q.set('agent_name_hint', 'Astrolabe');
+    if (!issuedClient) q.set('agent_name_hint', 'Astrophile Studio');
     else {
       if (saved.id_token) q.set('id_token_hint', saved.id_token);
       if (saved.email) q.set('login_hint', saved.email);
@@ -113,7 +113,7 @@ export class ChatGPTAuth {
 
     const finish = (res, ok, message) => {
       res.writeHead(ok ? 200 : 400, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(`<!doctype html><meta charset="utf-8"><title>Astrolabe</title><body style="font:16px/1.5 system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#fbfaf8;color:#1c1b1f"><div style="text-align:center;max-width:420px;padding:24px"><h2 style="margin:0 0 8px">${ok ? 'Signed in' : 'Sign-in didn’t finish'}</h2><p style="color:#6b6876;margin:0">${escapeHtml(message)}</p></div></body>`);
+      res.end(`<!doctype html><meta charset="utf-8"><title>Astrophile Studio</title><body style="font:16px/1.5 system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#fbfaf8;color:#1c1b1f"><div style="text-align:center;max-width:420px;padding:24px"><h2 style="margin:0 0 8px">${ok ? 'Signed in' : 'Sign-in didn’t finish'}</h2><p style="color:#6b6876;margin:0">${escapeHtml(message)}</p></div></body>`);
       this.cancelPending();
     };
 
@@ -150,7 +150,7 @@ export class ChatGPTAuth {
           scopes,
           saved_at: new Date().toISOString(),
         });
-        finish(res, true, scopes.includes(SHARE_SCOPE) ? 'You can close this tab and go back to Astrolabe.' : 'You are signed in, but permission to use your ChatGPT plan wasn’t granted, so the assistant can’t use it yet. Sign in again and allow plan usage.');
+        finish(res, true, scopes.includes(SHARE_SCOPE) ? 'You can close this tab and go back to Astrophile Studio.' : 'You are signed in, but permission to use your ChatGPT plan wasn’t granted, so the assistant can’t use it yet. Sign in again and allow plan usage.');
       } catch (e) {
         this.lastError = e.message;
         finish(res, false, e.message);

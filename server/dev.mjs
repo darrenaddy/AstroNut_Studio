@@ -41,7 +41,7 @@ export class DevServer {
   log(line, stream = 'out', source = 'dev') {
     for (const raw of String(line).split(/\r?\n/)) {
       const text = strip(raw);
-      if (!text.trim() || text.startsWith('__ASTROLABE_')) continue;
+      if (!text.trim() || text.startsWith('__ASTROPHILE_')) continue;
       const entry = { t: Date.now(), text, stream, source };
       this.logs.push(entry);
       if (this.logs.length > 600) this.logs.shift();
@@ -54,13 +54,13 @@ export class DevServer {
   }
   async start() {
     if (this.child) return;
-    const port = await freePort(Number(process.env.ASTROLABE_SITE_PORT) || 4601);
+    const port = await freePort(Number(process.env.ASTROPHILE_SITE_PORT) || 4601);
     this.setStatus('starting');
     const child = spawn(process.execPath, [runner, 'dev', String(port)], { cwd: this.root, env: { ...process.env, FORCE_COLOR: '0', ASTRO_TELEMETRY_DISABLED: '1' }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
     this.child = child;
     child.stdout.on('data', (d) => {
       const s = String(d);
-      const m = /__ASTROLABE_READY__ (\d+)/.exec(s);
+      const m = /__ASTROPHILE_READY__ (\d+)/.exec(s);
       if (m) {
         this.port = Number(m[1]);
         this.setStatus('running');

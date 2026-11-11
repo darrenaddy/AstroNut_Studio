@@ -1,4 +1,4 @@
-# Astrolabe
+# Astrophile Studio
 
 A visual, AI-assisted editor for [Astro](https://astro.build) sites that runs in your browser.
 
@@ -45,7 +45,7 @@ The **Location** widget shows a business's address, contact details, opening hou
 
 Fields can also be **lists** — repeating items such as FAQ questions, feature cards or team members. In a placement's fields you can add, remove, duplicate and reorder items and edit each one; double-clicking an item's text on the page edits just that item.
 
-To make a block into a widget, open it, select a piece of text, an image or a link, and choose **Make it a field**. To make a list, select the element that directly contains the repeating items (the row of cards) and choose **Turn into a list**: the first item becomes the pattern and whatever differs between items becomes the list. Items have to share the same structure and styling; if they don't, Astrolabe says where they differ. Today's content becomes the default, so existing pages don't change. Under the hood a field is an ordinary Astro prop with a default, and a placement's values are ordinary attributes, so nothing depends on Astrolabe.
+To make a block into a widget, open it, select a piece of text, an image or a link, and choose **Make it a field**. To make a list, select the element that directly contains the repeating items (the row of cards) and choose **Turn into a list**: the first item becomes the pattern and whatever differs between items becomes the list. Items have to share the same structure and styling; if they don't, Astrophile Studio says where they differ. Today's content becomes the default, so existing pages don't change. Under the hood a field is an ordinary Astro prop with a default, and a placement's values are ordinary attributes, so nothing depends on Astrophile Studio.
 
 When you add something that other pages already use, you choose **Linked** (shared) or **Copy for this page**. A shared placement can later be made independent from the right panel.
 
@@ -62,7 +62,7 @@ The assistant is provider-agnostic. Type **`/model`** in the chat (or click the 
 | Provider | How to enable it |
 |---|---|
 | **Claude** (Anthropic) | Sign in with `ant auth login` (OAuth, no key to store), or paste an API key in Settings, or set `ANTHROPIC_API_KEY`. A key takes priority over the sign-in. Usage is billed from your Claude Console credit balance, which is separate from a Claude app subscription. |
-| **ChatGPT plan** | In Settings, choose **Sign in with ChatGPT**. A browser tab opens, you approve Astrolabe using your plan, and that's it — no API key. Uses OpenAI's official sign-in for locally run apps; usage comes out of your ChatGPT Plus or Pro allowance (see chatgpt.com/settings/usage). The first sign-in needs port 1455 free. |
+| **ChatGPT plan** | In Settings, choose **Sign in with ChatGPT**. A browser tab opens, you approve Astrophile Studio using your plan, and that's it — no API key. Uses OpenAI's official sign-in for locally run apps; usage comes out of your ChatGPT Plus or Pro allowance (see chatgpt.com/settings/usage). The first sign-in needs port 1455 free. |
 | **Ollama** (local) | Install Ollama and pull a model. It is detected automatically at `http://localhost:11434`. |
 | **LM Studio** (local) | Start its local server. It is detected automatically at `http://localhost:1234`. |
 | **OpenAI**, **OpenRouter** | Paste an API key in Settings (or set `OPENAI_API_KEY` / `OPENROUTER_API_KEY`). |
@@ -70,7 +70,7 @@ The assistant is provider-agnostic. Type **`/model`** in the chat (or click the 
 
 Local models must support **tool use** (function calling), because the assistant works by reading and editing files — `qwen3`, `qwen2.5-coder` and `llama3.3` are common choices. Small local models are noticeably less reliable at multi-step edits than the hosted ones.
 
-Keys and addresses are stored only in `.astrolabe/settings.json` on your machine (git-ignored). Whatever the provider, the assistant can read, create, edit and delete files inside the open project — nothing else. It is told which page you are looking at and which element you have selected, so "make this bigger" works.
+Keys and addresses are stored only in `.astrophile/settings.json` on your machine (git-ignored). Whatever the provider, the assistant can read, create, edit and delete files inside the open project — nothing else. It is told which page you are looking at and which element you have selected, so "make this bigger" works.
 
 ## Editing a different Astro project
 

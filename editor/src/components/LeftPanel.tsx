@@ -5,7 +5,7 @@ import { api, q } from '../api';
 import { Menu } from './ui';
 import { AddChoice, SOURCES } from './Widgets';
 
-export const DRAG_TYPE = 'application/x-astrolabe';
+export const DRAG_TYPE = 'application/x-astrophile';
 
 const TAG_ICONS: Record<string, any> = { img: ImageIcon, a: Link2, ul: List, ol: List, button: MousePointerClick, h1: Heading, h2: Heading, h3: Heading, h4: Heading, p: Type, span: Type, hr: Minus, form: FormInput, input: FormInput, header: PanelTop, nav: PanelTop };
 
@@ -270,7 +270,7 @@ function AssetsTab() {
   const data = useStore((s) => s.data);
   const pageFile = useStore((s) => s.pageFile);
   const selection = useStore((s) => s.selection);
-  const [openFolders, setOpen] = useState<Record<string, boolean>>(() => JSON.parse(localStorage.getItem('astrolabe:folders') || '{}'));
+  const [openFolders, setOpen] = useState<Record<string, boolean>>(() => JSON.parse(localStorage.getItem('astrophile:folders') || '{}'));
   const [menu, setMenu] = useState<{ el: HTMLElement; c: any } | null>(null);
   const [add, setAdd] = useState<{ el: HTMLElement; c: any } | null>(null);
   const folders = useMemo(() => {
@@ -286,7 +286,7 @@ function AssetsTab() {
   const toggle = (f: string) => {
     const next = { ...openFolders, [f]: !(openFolders[f] ?? false) };
     setOpen(next);
-    localStorage.setItem('astrolabe:folders', JSON.stringify(next));
+    localStorage.setItem('astrophile:folders', JSON.stringify(next));
   };
   const create = (kind: 'component' | 'layout') =>
     useStore.setState({

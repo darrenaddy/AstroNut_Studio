@@ -846,7 +846,7 @@ function ComponentPanel() {
               </button>
             </div>
           ) : (
-            <p className="note">Astrolabe couldn’t find this component’s file from the page’s imports.</p>
+            <p className="note">Astrophile Studio couldn’t find this component’s file from the page’s imports.</p>
           )}
           {comp && comp.kind !== 'layout' && (
             <div className="usedon">

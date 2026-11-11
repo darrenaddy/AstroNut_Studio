@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Astrolabe — a visual editor for Astro sites.
+// Astrophile Studio — a visual editor for Astro sites.
 //   npm start                 edit the bundled starter site in ./site
 //   npm start -- ../my-site   edit any other Astro project
 import express from 'express';
@@ -13,7 +13,7 @@ import { Assistant, chatgpt, invalidateModels, listModels, publicSettings, saveP
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const editorRoot = path.join(here, '..', 'editor');
-const projectRoot = path.resolve(process.argv[2] || process.env.ASTROLABE_PROJECT || path.join(here, '..', 'site'));
+const projectRoot = path.resolve(process.argv[2] || process.env.ASTROPHILE_PROJECT || path.join(here, '..', 'site'));
 const PORT = Number(process.env.PORT) || 4600;
 
 if (!fs.existsSync(path.join(projectRoot, 'package.json'))) {
@@ -49,7 +49,7 @@ const wrap = (fn) => async (req, res) => {
     const out = await fn(req, res);
     if (!res.headersSent) res.json(out ?? { ok: true });
   } catch (e) {
-    if (!e.status) console.error('[astrolabe]', e);
+    if (!e.status) console.error('[astrophile]', e);
     if (!res.headersSent) res.status(e.status || 500).json({ error: e.message || String(e) });
   }
 };
@@ -163,7 +163,7 @@ const vite = await createServer({
 app.use(vite.middlewares);
 
 const server = app.listen(PORT, '127.0.0.1', async () => {
-  console.log(`\n  ✦ Astrolabe is running\n\n    Editor   http://localhost:${PORT}\n    Project  ${projectRoot}\n`);
+  console.log(`\n  ✦ Astrophile Studio is running\n\n    Editor   http://localhost:${PORT}\n    Project  ${projectRoot}\n`);
   await dev.start();
 });
 server.on('error', (e) => {

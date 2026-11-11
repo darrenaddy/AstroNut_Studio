@@ -12,7 +12,7 @@ export function TopBar() {
   const zoom = useStore((s) => s.zoom);
   const dev = useStore((s) => s.dev);
   const pageFile = useStore((s) => s.pageFile);
-  const isComponent = path.startsWith('/__astrolabe/');
+  const isComponent = path.startsWith('/__astrophile/');
   return (
     <div className="topbar">
       <div className="url" title={pageFile || path}>
@@ -93,7 +93,7 @@ export function Canvas() {
   }, []);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
-      if (e.data && e.data.__astrolabe) act().onBridge(e.data);
+      if (e.data && e.data.__astrophile) act().onBridge(e.data);
     };
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);

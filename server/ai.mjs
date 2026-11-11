@@ -8,8 +8,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const SETTINGS_DIR = process.env.ASTROLABE_HOME || path.join(here, '..', '.astrolabe');
+const SETTINGS_DIR = process.env.ASTROPHILE_HOME || path.join(here, '..', '.astrophile');
 const SETTINGS_FILE = path.join(SETTINGS_DIR, 'settings.json');
+// The app used to be called Astrolabe: carry its saved settings and sign-ins over once.
+const LEGACY_DIR = path.join(here, '..', '.astro' + 'labe');
+if (!process.env.ASTROPHILE_HOME && !fs.existsSync(SETTINGS_DIR) && fs.existsSync(LEGACY_DIR)) {
+  try {
+    fs.renameSync(LEGACY_DIR, SETTINGS_DIR);
+  } catch {}
+}
 export const chatgpt = new ChatGPTAuth(SETTINGS_DIR);
 
 export const MODELS = [
@@ -177,7 +184,7 @@ export async function publicSettings() {
     keySource: auth.source,
     keyHint: s.apiKey ? '••••' + s.apiKey.slice(-4) : null,
     models: MODELS,
-    mock: !!process.env.ASTROLABE_MOCK_AI,
+    mock: !!process.env.ASTROPHILE_MOCK_AI,
   };
 }
 
@@ -221,7 +228,7 @@ function validate(name, input) {
 }
 
 function systemPrompt(project) {
-  return `You are the built-in assistant of Astrolabe, a visual editor for Astro websites. The person you are helping is often new to Astro and is looking at a live preview of their site next to this chat. They describe what they want; you make it happen by editing the project's files with your tools. The preview reloads by itself after every write, and each of your turns becomes a single undo step in the editor, so act directly rather than asking for permission.
+  return `You are the built-in assistant of Astrophile Studio, a visual editor for Astro websites. The person you are helping is often new to Astro and is looking at a live preview of their site next to this chat. They describe what they want; you make it happen by editing the project's files with your tools. The preview reloads by itself after every write, and each of your turns becomes a single undo step in the editor, so act directly rather than asking for permission.
 
 ## The project
 - Astro site (static output) styled with Tailwind CSS v4. Project root: ${project.root}
@@ -353,7 +360,7 @@ export class Assistant {
     try {
       await this.project.transaction(label, async () => {
         const run = { settings, model: cur.id, provider, userText, emit, changed, signal: controller.signal };
-        if (process.env.ASTROLABE_MOCK_AI) return this.mock(prompt, context, emit, changed);
+        if (process.env.ASTROPHILE_MOCK_AI) return this.mock(prompt, context, emit, changed);
         if (provider.kind === 'anthropic') return this.runAnthropic(run);
         if (provider.kind === 'responses') return this.runResponses(run);
         return this.runOpenAI(run);
@@ -639,7 +646,7 @@ export class Assistant {
     }
   }
 
-  // Offline stand-in used for UI development (ASTROLABE_MOCK_AI=1). Exercises the same tools.
+  // Offline stand-in used for UI development (ASTROPHILE_MOCK_AI=1). Exercises the same tools.
   async mock(prompt, context, send, changed) {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const say = async (text) => {

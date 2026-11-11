@@ -73,10 +73,10 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => handle(e);
     const onForwarded = (e: any) => handle(e.detail);
     window.addEventListener('keydown', onKey);
-    window.addEventListener('astrolabe-key', onForwarded);
+    window.addEventListener('astrophile-key', onForwarded);
     return () => {
       window.removeEventListener('keydown', onKey);
-      window.removeEventListener('astrolabe-key', onForwarded);
+      window.removeEventListener('astrophile-key', onForwarded);
     };
   }, []);
 
