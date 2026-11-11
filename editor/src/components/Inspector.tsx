@@ -6,6 +6,7 @@ import * as tw from '../tw';
 import { Group, Modal, Popover, Seg, SelectField, TextField } from './ui';
 import { Code } from './Code';
 import { Media } from './LeftPanel';
+import { SourceTag, WidgetFields } from './Widgets';
 
 const FRIENDLY: Record<string, string> = { h1: 'Heading 1', h2: 'Heading 2', h3: 'Heading 3', h4: 'Heading 4', h5: 'Heading 5', h6: 'Heading 6', p: 'Paragraph', a: 'Link', img: 'Image', section: 'Section', div: 'Container', span: 'Text', ul: 'List', ol: 'Numbered list', li: 'List item', button: 'Button', nav: 'Navigation', header: 'Header', footer: 'Footer', main: 'Main content', body: 'Body', form: 'Form', input: 'Input', textarea: 'Text area', label: 'Label', svg: 'Icon', article: 'Article', figure: 'Figure', blockquote: 'Quote', table: 'Table', iframe: 'Embed', details: 'Disclosure', summary: 'Disclosure title', select: 'Dropdown', hr: 'Divider', video: 'Video', aside: 'Aside', strong: 'Bold text', em: 'Italic text', small: 'Small text', time: 'Time', path: 'Icon shape' };
 
@@ -232,7 +233,6 @@ function ColorField({ value, onChange, placeholder }: { value: string; onChange:
   );
 }
 
-const opt = (list: (string | [string, string])[]) => list.map((x) => (Array.isArray(x) ? { value: x[0], label: x[1] } : { value: x, label: x }));
 /** A text box for typing or pasting a hex colour ("#1a2b3c", "1a2b3c" or "#abc"). */
 function HexField({ value, onCommit, width = 92 }: { value: string; onCommit: (hex: string) => void; width?: number | string }) {
   const shown = tw.normalizeHex(value || '') || '';
@@ -277,6 +277,7 @@ function HexField({ value, onCommit, width = 92 }: { value: string; onCommit: (h
   );
 }
 
+const opt = (list: (string | [string, string])[]) => list.map((x) => (Array.isArray(x) ? { value: x[0], label: x[1] } : { value: x, label: x }));
 
 const DesignCtx = createContext<{ g: (group: string) => string | null; setG: (group: string, value: string | null) => void; others: (group: string) => string[] }>(null as any);
 
@@ -459,6 +460,7 @@ function DesignTab() {
       </div>
 
       {ContentGroup()}
+      <FieldTools />
 
       <Group title="Layout">
         <Seg
@@ -819,7 +821,9 @@ function ComponentPanel() {
   const all = [...(data?.components || []), ...(data?.layouts || [])];
   const comp = all.find((c: any) => c.file === info.componentFile);
   const isLayout = info.componentFile?.startsWith('src/layouts/');
-  const props = info.attrs.filter((a: any) => a.name);
+  const widgetFields = (info.fields || []).filter((f: any) => f.type !== 'code');
+  const fieldNames = new Set(widgetFields.map((f: any) => f.name));
+  const props = info.attrs.filter((a: any) => a.name && !fieldNames.has(a.name));
   return (
     <>
       <Head title={info.name} badge={isLayout ? 'layout' : 'component'} purple />
@@ -844,9 +848,45 @@ function ComponentPanel() {
           ) : (
             <p className="note">Astrolabe couldn’t find this component’s file from the page’s imports.</p>
           )}
+          {comp && comp.kind !== 'layout' && (
+            <div className="usedon">
+              <SourceTag source={comp.source} />
+              <span className="sub">
+                {comp.usedOn.length > 1 ? `Shared with ${comp.usedOn.length - 1} other page${comp.usedOn.length === 2 ? '' : 's'}` : 'Only used on this page'}
+              </span>
+              {comp.usedOn.length > 1 && (
+                <button className="sub" style={{ textDecoration: 'underline', marginLeft: 'auto' }} title="Give this page its own copy, so changes here no longer affect the other pages" onClick={() => act().detach()}>
+                  make independent
+                </button>
+              )}
+            </div>
+          )}
           <p className="sub" style={{ margin: 0 }}>Tip: click anything inside it on the page to edit that part directly.</p>
         </div>
-        <Group title="Properties" id="comp-props">
+        {widgetFields.length > 0 && (
+          <Group title={comp?.source === 'page' || comp?.source === 'data' ? 'Settings for this placement' : 'Content for this placement'} id="widget-fields">
+            <p className="note" style={{ margin: 0 }}>
+              {comp?.source === 'page' ? (
+                <>
+                  <b>{info.name}</b> works out what to show from the page it is on. These settings only adjust how.
+                </>
+              ) : comp?.source === 'data' ? (
+                <>
+                  <b>{info.name}</b> fills itself from your content. Choose what this placement shows; edit the entries themselves in the Content tab.
+                </>
+              ) : (
+                <>
+                  <b>{info.name}</b> is a widget: these values are just for this page. Its design is shared.
+                </>
+              )}
+            </p>
+            <WidgetFields fields={info.fields} values={info.values} onChange={(n, v) => act().setField(n, v)} onReset={(n) => act().setField(n, null)} />
+            <button className="btn sm ghost" onClick={() => useStore.setState({ widgetOpen: true })}>
+              Open in the widget editor
+            </button>
+          </Group>
+        )}
+        <Group title={widgetFields.length ? 'Other properties' : 'Properties'} id="comp-props" defaultOpen={!widgetFields.length}>
           {!props.length && <p className="note" style={{ margin: 0 }}>No properties are passed to this {isLayout ? 'layout' : 'component'}.</p>}
           {props.map((a: any) => (
             <div className="field" key={a.name}>
@@ -929,6 +969,86 @@ const SEM: [string, string, string][] = [
   ['--line', 'Borders', 'border-line'],
 ];
 
+/** For an element inside a component: say which field it shows, or offer to make it one. */
+function FieldTools() {
+  const sel = useStore((s) => s.selection)!;
+  const pageFile = useStore((s) => s.pageFile);
+  const info = sel.info;
+  const [names, setNames] = useState<Record<string, string>>({});
+  useEffect(() => setNames(info?.fieldNames || {}), [info?.start, sel.file, JSON.stringify(info?.fieldNames || {})]);
+  if (!info) return null;
+  const onPage = pageFile !== sel.file;
+  if (info.field) {
+    return (
+      <Group title="Widget field" id="field-tools">
+        <p className="note" style={{ margin: 0 }}>
+          This shows the <b>{info.field}</b> field. {onPage ? 'Double-click it on the page to change it for this page only.' : 'Double-click it to change the default text.'}
+        </p>
+        {onPage && (
+          <button className="btn sm" onClick={() => act().selectPlacement(true)}>
+            Edit this placement’s fields
+          </button>
+        )}
+      </Group>
+    );
+  }
+  if (info.listItem) {
+    return (
+      <Group title="Widget field" id="field-tools">
+        <p className="note" style={{ margin: 0 }}>
+          This is the <b>{info.listItem.key}</b> of one item in the <b>{info.listItem.field}</b> list. Double-click it to change just this item{onPage ? ' on this page' : ''}. Add, remove or reorder items in the widget’s fields.
+        </p>
+        {onPage && (
+          <button className="btn sm" onClick={() => act().selectPlacement(true)}>
+            Edit the whole list
+          </button>
+        )}
+      </Group>
+    );
+  }
+  const kinds: string[] = info.fieldKinds || [];
+  if (!kinds.length) return null;
+  const what: Record<string, string> = { text: 'this text', image: 'this image', link: 'this link’s address', list: `these ${info.repeatCount} repeating items` };
+  return (
+    <Group title="Make it a field" id="field-tools" defaultOpen={false}>
+      <p className="note" style={{ margin: 0 }}>Turn a piece of this block into a field, and each page that uses the block can have its own value for it.</p>
+      {kinds.map((k) => (
+        <div className="field" key={k}>
+          <label>Field name for {what[k]}</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <div className="inp" style={{ flex: 1, minWidth: 0 }}>
+              <input value={names[k] ?? ''} spellCheck={false} style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }} onChange={(e) => setNames({ ...names, [k]: e.target.value })} onKeyDown={(e) => e.stopPropagation()} />
+            </div>
+            <button className="btn sm" disabled={!(names[k] || '').trim()} onClick={() => act().toField(k, names[k].trim()).catch(act().fail)}>
+              {k === 'list' ? 'Turn into a list' : 'Turn into a field'}
+            </button>
+          </div>
+        </div>
+      ))}
+    </Group>
+  );
+}
+
+/** When a widget is open on its own, edit the default value of each field. */
+function WidgetDefaults({ file }: { file: string }) {
+  const stamp = useStore((s) => s.data);
+  const [fields, setFields] = useState<any[]>([]);
+  useEffect(() => {
+    let live = true;
+    api.get('/fields?file=' + encodeURIComponent(file)).then((r) => live && setFields(r.fields)).catch(() => live && setFields([]));
+    return () => {
+      live = false;
+    };
+  }, [file, stamp]);
+  if (!fields.filter((f) => f.type !== 'code').length) return null;
+  return (
+    <Group title="Default content" id="widget-defaults">
+      <p className="note" style={{ margin: 0 }}>What this widget shows when a page doesn’t set its own value.</p>
+      <WidgetFields fields={fields} onChange={(n, v) => act().setDefault(file, n, v)} />
+    </Group>
+  );
+}
+
 function PagePanel() {
   const data = useStore((s) => s.data);
   const pageFile = useStore((s) => s.pageFile);
@@ -990,6 +1110,7 @@ function PagePanel() {
         <p className="note">Nothing is selected. Click anything on the page to style it — or set up the page and your site-wide theme here.</p>
       </div>
       <div className="scroll">
+        {!page && pageFile && <WidgetDefaults file={pageFile} />}
         {page && rootInfo && (
           <Group title="Page" id="page-settings">
             <div className="field">
@@ -1020,7 +1141,6 @@ function PagePanel() {
                 {PRESETS.map(([n, c]) => (
                   <button key={n} title={n} style={{ background: c }} onClick={() => setBrand(c)} />
                 ))}
-                <input type="color" title="Pick any colour" value={tw.isHex(brand500) ? brand500 : '#7445ff'} onChange={(e) => setBrand(e.target.value, true)} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <input type="color" title="Pick any colour" value={tw.normalizeHex(brand500) || '#7445ff'} onChange={(e) => setBrand(e.target.value, true)} />

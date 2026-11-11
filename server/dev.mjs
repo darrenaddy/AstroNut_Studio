@@ -30,6 +30,7 @@ export class DevServer {
     this.logs = [];
     this.child = null;
     this.building = false;
+    this.routes = [];
   }
   get url() {
     return this.port ? `http://localhost:${this.port}` : null;
@@ -67,6 +68,12 @@ export class DevServer {
       this.log(s);
     });
     child.stderr.on('data', (d) => this.log(String(d), 'err'));
+    child.on('message', (m) => {
+      if (m?.type !== 'routes') return;
+      const prefix = this.root.replace(/\\/g, '/') + '/';
+      this.routes = m.routes.map((r) => ({ ...r, entrypoint: r.entrypoint.startsWith(prefix) ? r.entrypoint.slice(prefix.length) : r.entrypoint }));
+      this.emit({ type: 'fs', file: '', event: 'routes' });
+    });
     child.on('exit', (code) => {
       if (this.child !== child) return;
       this.child = null;

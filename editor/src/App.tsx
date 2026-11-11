@@ -7,6 +7,7 @@ import { Inspector, useDark } from './components/Inspector';
 import { Chat, CodeEditor, Dialog, Settings, Terminal, Welcome } from './components/Panels';
 import { ContentEditor } from './components/ContentEditor';
 import { Menu } from './components/ui';
+import { Inventory, WidgetEditor } from './components/Widgets';
 
 export default function App() {
   const tab = useStore((s) => s.tab);
@@ -16,6 +17,8 @@ export default function App() {
   const terminalOpen = useStore((s) => s.terminalOpen);
   const settingsOpen = useStore((s) => s.settingsOpen);
   const codeFile = useStore((s) => s.codeFile);
+  const inventoryOpen = useStore((s) => s.inventoryOpen);
+  const widgetOpen = useStore((s) => s.widgetOpen);
   const dialog = useStore((s) => s.dialog);
   const welcomeOpen = useStore((s) => s.welcomeOpen);
   const toasts = useStore((s) => s.toasts);
@@ -103,6 +106,7 @@ export default function App() {
         )}
         {chatOpen && <Chat />}
         {terminalOpen && <Terminal />}
+        {widgetOpen && !contentMode && <WidgetEditor />}
         {contentMode && <MiniDock />}
       </main>
       {!contentMode && <Inspector />}
@@ -127,6 +131,7 @@ export default function App() {
         />
       )}
 
+      {inventoryOpen && <Inventory />}
       {codeFile && <CodeEditor />}
       {settingsOpen && <Settings />}
       {dialog && <Dialog key={dialog.title} />}

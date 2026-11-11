@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
-import { Box, ChevronRight, Code2, Component, Copy, Database, File, FileText, Folder, FolderPlus, Home, LayoutTemplate, MoreHorizontal, Palette, Pencil, Plus, ScanLine, Trash2, Type, Upload, X, Image as ImageIcon, Link2, List, Square, MousePointerClick, Minus, Heading, FormInput, PanelTop } from 'lucide-react';
+import { ListTree, Box, ChevronRight, Code2, Component, Copy, Database, File, FileText, Folder, FolderPlus, Home, LayoutTemplate, MoreHorizontal, Palette, Pencil, Plus, ScanLine, Trash2, Type, Upload, X, Image as ImageIcon, Link2, List, Square, MousePointerClick, Minus, Heading, FormInput, PanelTop } from 'lucide-react';
 import { useStore, act, type OutlineNode, EMPTY } from '../store';
 import { api, q } from '../api';
 import { Menu } from './ui';
+import { AddChoice, SOURCES } from './Widgets';
 
 export const DRAG_TYPE = 'application/x-astrolabe';
 
@@ -271,6 +272,7 @@ function AssetsTab() {
   const selection = useStore((s) => s.selection);
   const [openFolders, setOpen] = useState<Record<string, boolean>>(() => JSON.parse(localStorage.getItem('astrolabe:folders') || '{}'));
   const [menu, setMenu] = useState<{ el: HTMLElement; c: any } | null>(null);
+  const [add, setAdd] = useState<{ el: HTMLElement; c: any } | null>(null);
   const folders = useMemo(() => {
     const map = new Map<string, any[]>();
     for (const c of data?.components || []) {
@@ -307,7 +309,7 @@ function AssetsTab() {
   const row = (c: any, depth = 1) => (
     <div
       key={c.file}
-      className={'row ' + (c.dynamic && c.kind !== 'layout' ? 'dyn' : 'comp') + (pageFile === c.file ? ' on' : '')}
+      className={'row src-' + c.source + (pageFile === c.file ? ' on' : '') + (!c.usedOn.length && c.kind !== 'layout' ? ' unused' : '')}
       style={{ paddingLeft: 10 + depth * 14 }}
       draggable={c.kind !== 'layout'}
       onDragStart={(e) => {
@@ -315,11 +317,12 @@ function AssetsTab() {
         e.dataTransfer.effectAllowed = 'copy';
       }}
       onClick={() => act().openComponent(c)}
-      title={`${c.file}\nClick to open · drag onto the page to add`}
+      title={`${c.file}\n${SOURCES[c.source]?.label}: ${SOURCES[c.source]?.tip}\n${c.usedOn.length ? 'Used on ' + c.usedOn.map((u: any) => u.route).join(', ') : 'Not used on any page yet'}\nClick to open · drag onto the page to add`}
     >
       {c.kind === 'layout' ? <LayoutTemplate size={14} style={{ flex: 'none' }} /> : <Component size={14} style={{ flex: 'none' }} />}
       <span className="label">{c.name}</span>
-      {c.dynamic && c.kind !== 'layout' && <span className="meta hide-on-hover" title="Its content comes from data (a collection or properties)">dynamic</span>}
+      {c.source !== 'block' && c.source !== 'layout' && <span className="meta hide-on-hover">{SOURCES[c.source]?.label.toLowerCase()}</span>}
+      {c.source === 'block' && c.usedOn.length > 0 && <span className="meta hide-on-hover" title={'Used on ' + c.usedOn.map((u: any) => u.route).join(', ')}>{c.usedOn.length}</span>}
       <span className="acts">
         {c.kind !== 'layout' && (
           <button
@@ -327,7 +330,10 @@ function AssetsTab() {
             title="Add to the current page"
             onClick={(e) => {
               e.stopPropagation();
-              act().insertBlock({ component: c.file, hasSlot: false });
+              // Already on other pages? Ask whether to share it or make a copy.
+              const elsewhere = c.usedOn.some((u: any) => u.file !== pageFile);
+              if (elsewhere) setAdd({ el: e.currentTarget, c });
+              else act().insertBlock({ component: c.file, hasSlot: false });
             }}
           >
             <Plus size={14} />
@@ -363,6 +369,9 @@ function AssetsTab() {
           <div className="section-head">
             <span>Components</span>
             <span className="acts">
+              <button className="icon-btn sm tip down" data-tip="Inventory — what is used where" onClick={() => useStore.setState({ inventoryOpen: true })}>
+                <ListTree size={15} />
+              </button>
               <button className="icon-btn sm tip down" data-tip="New component" onClick={() => create('component')}>
                 <Plus size={15} />
               </button>
@@ -400,6 +409,7 @@ function AssetsTab() {
         </div>
         <Media />
       </div>
+      {add && <AddChoice anchor={add.el} c={add.c} onClose={() => setAdd(null)} />}
       {menu && (
         <Menu
           anchor={menu.el}
@@ -427,6 +437,7 @@ function AssetsTab() {
                     type: 'confirm',
                     title: `Delete ${menu.c.name}?`,
                     text: `This removes ${menu.c.file}. Pages that still use it will show an error until you remove it from them. Undo brings it back.`,
+                    usedOn: menu.c.usedOn,
                     confirm: 'Delete',
                     danger: true,
                     onSubmit: async () => {

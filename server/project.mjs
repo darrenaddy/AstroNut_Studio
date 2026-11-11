@@ -4,6 +4,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import matter from 'gray-matter';
 import * as A from './astro-source.mjs';
+import * as W from './widgets.mjs';
 
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.ico']);
 const MEDIA_EXT = new Set([...IMAGE_EXT, '.mp4', '.webm', '.mp3', '.pdf', '.woff2']);
@@ -153,7 +154,11 @@ export class Project {
     return this.walk('src/pages', (n) => /\.(astro|md|mdx)$/.test(n)).map((file) => {
       let r = file.replace(/^src\/pages\//, '').replace(/\.(astro|md|mdx)$/, '');
       r = r.replace(/(^|\/)index$/, '');
-      const route = '/' + r.replace(/\/$/, '');
+      let route = '/' + r.replace(/\/$/, '');
+      // Astro's dev server reports the real route for each file (base path, i18n,
+      // trailing slashes…). Use it when we have it; the file name is the fallback.
+      const known = (this.routes?.() || []).find((x) => x.entrypoint === file && x.type === 'page');
+      if (known?.pattern) route = known.pattern === '/' ? '/' : known.pattern.replace(/\/$/, '');
       const dynamic = /\[/.test(route);
       let title = null;
       const src = this.readOr(file, '');
@@ -163,25 +168,84 @@ export class Project {
     });
   }
 
+  /** Which files place which components, and which pages end up showing them. */
+  usage() {
+    const files = this.walk('src', (n) => n.endsWith('.astro'));
+    const places = {}; // file -> { componentFile: count }
+    for (const file of files) {
+      try {
+        const doc = this.doc(file);
+        const imports = this.componentMap(file, doc);
+        const counts = {};
+        for (const node of doc.all) {
+          if (node.type !== 'component') continue;
+          const target = imports[node.name.split('.')[0]];
+          if (target) counts[target] = (counts[target] || 0) + 1;
+        }
+        places[file] = counts;
+      } catch {
+        places[file] = {};
+      }
+    }
+    const pages = this.pages();
+    const usedOn = {}; // componentFile -> [{ file, route, count, direct }]
+    for (const page of pages) {
+      const seen = new Map(); // componentFile -> { count, direct }
+      const visit = (file, depth) => {
+        for (const [target, count] of Object.entries(places[file] || {})) {
+          const had = seen.get(target);
+          if (had) {
+            if (depth === 0) {
+              had.direct = true;
+              had.count += count;
+            }
+            continue;
+          }
+          seen.set(target, { count: depth === 0 ? count : 0, direct: depth === 0 });
+          if (depth < 8) visit(target, depth + 1);
+        }
+      };
+      visit(page.file, 0);
+      for (const [target, u] of seen) (usedOn[target] ||= []).push({ file: page.file, route: page.route, count: u.count, direct: u.direct });
+    }
+    const usedBy = {}; // componentFile -> files that place it directly
+    for (const [file, counts] of Object.entries(places)) for (const target of Object.keys(counts)) (usedBy[target] ||= []).push(file);
+    return { usedOn, usedBy };
+  }
+
   components() {
+    const { usedOn, usedBy } = this.usage();
     const map = (dir, kind) =>
       this.walk(dir, (n) => n.endsWith('.astro')).map((file) => {
         const relToDir = file.slice(dir.length + 1);
         const parts = relToDir.split('/');
         const src = this.readOr(file, '');
+        let fields = [];
+        try {
+          fields = W.parseFields(src).fields;
+        } catch {}
+        const editable = fields.filter((f) => f.type !== 'code');
+        const data = /getCollection|getEntry|getEntries/.test(src);
+        // Works out what to show from the page it is on: its address, or the page's own headings.
+        const pageAware = /Astro\.url|Astro\.params|Astro\.currentLocale|from ['"]astro-breadcrumbs['"]|\bheadings\b/.test(src);
+        // Where the content comes from decides how it is edited.
+        const source = kind === 'layout' ? 'layout' : data ? 'data' : pageAware ? 'page' : editable.length ? 'widget' : fields.length ? 'code' : 'block';
         return {
           file,
           kind,
+          source,
           name: path.basename(file, '.astro'),
           folder: parts.length > 1 ? parts.slice(0, -1).join('/') : '',
-          dynamic: /getCollection|getEntry|Astro\.props|\.map\(/.test(src),
+          dynamic: source !== 'block' && source !== 'layout',
+          fields: editable.map((f) => ({ name: f.name, label: f.label, type: f.type, count: f.type === 'list' ? f.default.length : undefined })),
           hasSlot: /<slot[\s/>]/.test(src),
+          usedOn: usedOn[file] || [],
+          usedBy: usedBy[file] || [],
           previewId: file.replace(/^src\//, '').replace(/\.astro$/, '').split('/').join('~'),
         };
       });
     return { components: map('src/components', 'component'), layouts: map('src/layouts', 'layout') };
   }
-
   media() {
     return this.walk('public', (n) => MEDIA_EXT.has(path.extname(n).toLowerCase())).map((file) => {
       const st = fs.statSync(this.abs(file));
@@ -357,7 +421,72 @@ export class Project {
       componentFile: node.type === 'component' ? imports[node.name.split('.')[0]] || null : null,
       ancestors,
       line: node.line,
+      ...this.widgetInfo(file, doc, node, imports),
     };
+  }
+
+  /** Field details for a selected node: a placement's values, or the field an element shows. */
+  widgetInfo(file, doc, node, imports) {
+    try {
+      if (node.type === 'component') {
+        const target = imports[node.name.split('.')[0]];
+        if (!target) return {};
+        const { fields } = W.parseFields(this.read(target));
+        return { fields, values: W.readValues(node, fields) };
+      }
+      if (node.type !== 'element') return {};
+      const own = W.parseFields(doc.src);
+      const kinds = /^src\/(components|layouts)\//.test(file) ? W.fieldKindsFor(doc, node) : [];
+      const taken = new Set(own.fields.map((f) => f.name));
+      return {
+        field: W.fieldOfNode(doc, node, own.fields),
+        listItem: W.listItemOfNode(doc, node, own.fields),
+        fieldKinds: kinds,
+        fieldNames: Object.fromEntries(kinds.map((k) => [k, W.suggestName(node, k, taken)])),
+        repeatCount: kinds.includes('list') ? node.children.length : 0,
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  /** The fields of a component file with their defaults (for editing a widget's defaults). */
+  fieldsOf(file) {
+    return W.parseFields(this.read(file)).fields;
+  }
+
+  /**
+   * Find which placement on a page a rendered copy belongs to.
+   * `index` is its position among the rendered copies; `text`/`field` let us
+   * double-check by content when the same widget is also placed elsewhere.
+   */
+  placementFor({ page, component, index = 0, field, text }) {
+    const doc = this.doc(page);
+    const imports = this.componentMap(page, doc);
+    const list = doc.all.filter((x) => x.type === 'component' && imports[x.name.split('.')[0]] === component);
+    if (!list.length) throw httpError(404, 'This widget isn’t placed directly on this page (it comes from a layout or another component), so open that file to change it.');
+    let node = list[index] || null;
+    if (field && text != null) {
+      const fields = W.parseFields(this.read(component)).fields;
+      const norm = (v) => String(v ?? '').replace(/\s+/g, ' ').trim();
+      const matches = list.filter((n) => norm(W.readValues(n, fields)[field]?.value) === norm(text));
+      if (!(node && matches.includes(node))) node = matches.length === 1 ? matches[0] : node || (list.length === 1 ? list[0] : null);
+    }
+    if (!node) throw httpError(409, 'Couldn’t tell which copy of this widget you mean. Select it in the Layers list instead.');
+    return { file: page, start: node.start, loc: node.loc, name: node.name, type: 'component' };
+  }
+
+  /** Copy a component so one page can have its own independent version. Returns the new file. */
+  copyComponentFor(componentFile, pageFile) {
+    const dir = path.posix.dirname(componentFile);
+    const base = path.basename(componentFile, '.astro');
+    const page = this.pages().find((p) => p.file === pageFile);
+    const suffix = (page ? page.name : path.basename(pageFile, '.astro')).replace(/[^A-Za-z0-9]/g, '').replace(/^\w/, (c) => c.toUpperCase()) || 'Copy';
+    let name = base + suffix;
+    for (let k = 2; this.exists(`${dir}/${name}.astro`); k++) name = base + suffix + k;
+    const to = `${dir}/${name}.astro`;
+    this.write(to, this.read(componentFile));
+    return to;
   }
 
   /** Where new blocks go when nothing is selected. */
@@ -399,7 +528,67 @@ export class Project {
     const structural = ['delete', 'duplicate', 'move', 'wrap'].includes(o.type) || (o.type === 'insert' && target && !o.pageLevel && (o.position || 'after') !== 'inside-end' && (o.position || 'after') !== 'inside-start');
     if (target?.exprRoot && structural) throw httpError(400, 'This element is produced by code (a loop or a condition), so it can’t be moved, copied or removed from here. Change it in the Source tab of its parent — or ask the AI to.');
 
+    const extra = []; // other files to write in the same undo step
     switch (o.type) {
+      case 'setField': {
+        // One field of one placement of a widget.
+        const imports = this.componentMap(file, doc);
+        const compFile = imports[target.name.split('.')[0]];
+        const field = compFile && W.parseFields(this.read(compFile)).fields.find((f) => f.name === o.name);
+        if (!field || field.type === 'code') throw httpError(400, `“${o.name}” isn’t an editable field of ${target.name}.`);
+        res = { src: W.setFieldValue(src, target, field, o.value), at: target.start };
+        label = o.value == null ? `Reset ${field.label.toLowerCase()}` : `Edit ${field.label.toLowerCase()}`;
+        break;
+      }
+      case 'setItem': {
+        // One value of one item in a list field — on a placement, or (no target) in the widget's defaults.
+        const compFile = target ? this.componentMap(file, doc)[target.name.split('.')[0]] : file;
+        const field = compFile && W.parseFields(this.read(compFile)).fields.find((f) => f.name === o.name && f.type === 'list');
+        if (!field) throw httpError(400, `“${o.name}” isn’t a list field.`);
+        const current = target ? W.readValues(target, [field])[field.name] : { value: field.default };
+        if (!Array.isArray(current.value)) throw httpError(400, 'This list is set from code on this page, so it can’t be edited here.');
+        const list = current.value.map((it) => ({ ...it }));
+        if (!list[o.index]) throw httpError(409, 'That item no longer exists.');
+        list[o.index][o.key] = o.value;
+        res = target ? { src: W.setFieldValue(src, target, field, list), at: target.start } : { src: W.setFieldDefault(src, o.name, list), at: null };
+        label = `Edit ${field.label.toLowerCase()}`;
+        break;
+      }
+      case 'setDefault': {
+        res = { src: W.setFieldDefault(src, o.name, o.value), at: null };
+        label = `Edit default ${o.name}`;
+        break;
+      }
+      case 'toField': {
+        const out = o.kind === 'list' ? W.turnIntoList(src, target, String(o.name || '').trim()) : W.turnIntoField(src, target, o.kind, String(o.name || '').trim());
+        if (o.dryRun) return { ok: true, preview: W.diffLines(src, out.src), usedOn: this.usage().usedOn[file] || [] };
+        res = { src: out.src, at: null };
+        label = `Turn into field “${o.name}”`;
+        break;
+      }
+      case 'detach': {
+        // Give this page its own copy of a shared component.
+        const imports = this.componentMap(file, doc);
+        const oldName = target.name.split('.')[0];
+        const compFile = imports[oldName];
+        if (!compFile) throw httpError(400, 'Couldn’t find this component’s file.');
+        const to = await this.transaction(`Make ${oldName} independent`, async () => {
+          const copy = this.copyComponentFor(compFile, file);
+          const newName = path.basename(copy, '.astro');
+          let out = src;
+          if (target.closeStart != null && !target.implicitClose) out = out.slice(0, target.closeStart + 2) + newName + out.slice(target.closeStart + 2 + target.name.length);
+          out = out.slice(0, target.start + 1) + newName + out.slice(target.start + 1 + target.name.length);
+          let source = path.posix.relative(path.posix.dirname(file), copy);
+          if (!source.startsWith('.')) source = './' + source;
+          out = A.addImport(A.parse(out), newName, source).src;
+          out = A.pruneImport(out, oldName);
+          this.write(file, out);
+          return { copy, newName, out };
+        });
+        const d2 = A.parse(to.out);
+        const node = d2.all.find((x) => x.type === 'component' && x.name === to.newName);
+        return { ok: true, copy: to.copy, select: node ? { file, start: node.start, loc: node.loc, name: node.name, type: 'component' } : null };
+      }
       case 'setAttr': {
         res = A.setAttr(doc, target, o.name, o.value);
         label = o.name === 'class' ? 'Change styles' : `Set ${o.name}`;
@@ -486,7 +675,19 @@ export class Project {
         let workDoc = doc;
         let shift = 0;
         if (o.component) {
-          const { name, needsImport, source } = this.importNameFor(file, doc, o.component);
+          let componentFile = o.component;
+          if (o.copy) {
+            // "Copy for this page": duplicate the file first, then place the copy.
+            const dir = path.posix.dirname(o.component);
+            const base = path.basename(o.component, '.astro');
+            const page = this.pages().find((p) => p.file === file);
+            const suffix = (page ? page.name : path.basename(file, '.astro')).replace(/[^A-Za-z0-9]/g, '').replace(/^\w/, (c) => c.toUpperCase()) || 'Copy';
+            let n = base + suffix;
+            for (let k = 2; this.exists(`${dir}/${n}.astro`); k++) n = base + suffix + k;
+            componentFile = `${dir}/${n}.astro`;
+            extra.push({ file: componentFile, content: this.read(o.component) });
+          }
+          const { name, needsImport, source } = this.importNameFor(file, doc, componentFile);
           snippet = o.withSlot ? `<${name}>\n  <p>Content</p>\n</${name}>` : `<${name} />`;
           if (needsImport) {
             const r = A.addImport(doc, name, source);
@@ -504,7 +705,11 @@ export class Project {
         throw httpError(400, `Unknown operation: ${o.type}`);
     }
 
-    if (res.src !== src) await this.transaction(label, () => this.write(file, res.src));
+    if (res.src !== src || extra.length)
+      await this.transaction(label, () => {
+        for (const e of extra) this.write(e.file, e.content);
+        this.write(file, res.src);
+      });
     let select = null;
     if (res.at != null) {
       doc = A.parse(res.src);

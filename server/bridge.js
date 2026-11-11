@@ -112,6 +112,14 @@
       rect: { x: r.x, y: r.y, w: r.width, h: r.height },
       path,
       instances: sameLoc(fileOf(el), locOf(el)).length,
+      // which repeated item this is within its own copy of the component (0 for non-repeated)
+      itemIndex: (() => {
+        const run = componentRuns(fileOf(el)).find((r) => r.some((x) => x === el || x.contains(el)));
+        const mates = sameLoc(fileOf(el), locOf(el)).filter((e) => !run || run.some((x) => x === e || x.contains(e)));
+        return Math.max(0, mates.indexOf(el));
+      })(),
+      // which rendered copy of its component this element belongs to
+      runIndex: Math.max(0, componentRuns(fileOf(el)).findIndex((run) => run.some((r) => r === el || r.contains(el)))),
     };
   }
 

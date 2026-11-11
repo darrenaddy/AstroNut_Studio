@@ -28,6 +28,11 @@ function bridge() {
         injectRoute({ pattern: '/__astrolabe/c/[id]', entrypoint: path.join(here, 'preview/component.astro'), prerender: true });
         updateConfig({ vite: { server: { fs: { allow: [here, root] } } } });
       },
+      // Astro's own list of routes — the editor uses it for its page list.
+      'astro:routes:resolved'({ routes }) {
+        const list = routes.map((r) => ({ pattern: r.pattern, entrypoint: String(r.entrypoint || '').replace(/\\/g, '/'), type: r.type, origin: r.origin, params: r.params }));
+        process.send?.({ type: 'routes', routes: list });
+      },
     },
   };
 }
