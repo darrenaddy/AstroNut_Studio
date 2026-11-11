@@ -1,5 +1,12 @@
 ---
 // Contact form — contact details on the left, form card on the right.
+interface Props {
+  /** Your Formspree form ID (the letters after formspree.io/f/). Any full address that accepts form posts also works. */
+  sendTo?: string;
+}
+const { sendTo = "" } = Astro.props;
+const target = sendTo.trim();
+const action = !target ? '#' : /^https?:\/\//.test(target) ? target : `https://formspree.io/f/${target}`;
 ---
 
 <section class="bg-surface py-20 sm:py-28">
@@ -56,7 +63,7 @@
         <h3 class="font-display text-2xl font-semibold tracking-tight text-fg">Send us a note</h3>
         <p class="mt-2 text-sm text-muted">All fields are required.</p>
 
-        <form action="#" method="post" class="mt-8 space-y-5">
+        <form action={action} method="post" class="mt-8 space-y-5">
           <div class="grid gap-5 sm:grid-cols-2">
             <div>
               <label for="contact-name" class="block text-sm font-medium text-fg">Name</label>

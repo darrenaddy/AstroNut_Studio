@@ -139,6 +139,7 @@ function ListField({ field, value, onChange }: { field: any; value: any[]; onCha
             <ChevronRight size={12} className="tw" />
             <span className="num">{i + 1}</span>
             <span className="ttl">{String(it[titleKey] ?? '').replace(/<[^>]+>/g, '') || `Item ${i + 1}`}</span>
+            {typeof it.type === 'string' && <span className="sub" style={{ flex: 'none' }}>{it.type}</span>}
             <span className="acts" onClick={(e) => e.stopPropagation()}>
               <button className="icon-btn sm" title="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
                 <ArrowUp size={12} />
@@ -160,6 +161,7 @@ function ListField({ field, value, onChange }: { field: any; value: any[]; onCha
                 <div className="field" key={k.name}>
                   <label className="lbl">{k.label}</label>
                   <FieldInput field={k} value={it[k.name]} onChange={(v) => update(items.map((x, j) => (j === i ? { ...x, [k.name]: v } : x)))} />
+                  {k.help && <span className="help">{k.help}</span>}
                 </div>
               ))}
             </div>
@@ -207,6 +209,7 @@ export function WidgetFields({ fields, values, onChange, onReset }: { fields: an
             ) : (
               <FieldInput field={f} value={st?.value} onChange={(v) => onChange(f.name, v)} />
             )}
+            {f.help && <span className="help">{f.help}</span>}
           </div>
         );
       })}

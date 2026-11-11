@@ -7,7 +7,7 @@ import chokidar from 'chokidar';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Project, httpError } from './project.mjs';
+import { Project, httpError, FORM_PRESETS } from './project.mjs';
 import { DevServer } from './dev.mjs';
 import { Assistant, chatgpt, invalidateModels, listModels, publicSettings, saveProviders, saveSettings, setModel } from './ai.mjs';
 
@@ -106,6 +106,8 @@ api.put('/content/entry', wrap((req) => project.saveEntry(req.body.file, req.bod
 api.post('/content/entry', wrap((req) => project.createEntry(req.body.collection, req.body.title)));
 api.post('/content/collection', wrap((req) => project.createCollection(req.body.name)));
 
+api.post('/forms', wrap((req) => project.createForm(req.body)));
+api.get('/forms/presets', wrap(() => Object.entries(FORM_PRESETS).map(([value, p]) => ({ value, label: p.label }))));
 // ---- dev server / build ----------------------------------------------------
 api.post('/dev/restart', wrap(async () => {
   await dev.restart();

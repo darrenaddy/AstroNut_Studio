@@ -1041,9 +1041,10 @@ function WidgetDefaults({ file }: { file: string }) {
     };
   }, [file, stamp]);
   if (!fields.filter((f) => f.type !== 'code').length) return null;
+  const isForm = fields.some((f) => f.name === 'fields' && f.type === 'list') && fields.some((f) => f.name === 'sendTo');
   return (
-    <Group title="Default content" id="widget-defaults">
-      <p className="note" style={{ margin: 0 }}>What this widget shows when a page doesn’t set its own value.</p>
+    <Group title={isForm ? 'Form builder' : 'Default content'} id="widget-defaults">
+      <p className="note" style={{ margin: 0 }}>{isForm ? 'Build the form here: add, remove and reorder its fields, set where it sends submissions, and watch it update on the left.' : 'What this widget shows when a page doesn’t set its own value.'}</p>
       <WidgetFields fields={fields} onChange={(n, v) => act().setDefault(file, n, v)} />
     </Group>
   );

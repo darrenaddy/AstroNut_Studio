@@ -430,3 +430,9 @@ button.pagechip:hover { background: var(--active); color: var(--fg); }
 .listhead .acts { display: none; flex: none; }
 .listhead:hover .acts, .listitem.open .listhead .acts { display: flex; }
 .listbody { display: grid; gap: 8px; padding: 6px 10px 10px; border-top: 1px solid var(--line); }
+
+.help { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.choices button { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); text-align: left; font-weight: 500; }
+.choices button:hover { background: var(--hover); }
+.choices button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }

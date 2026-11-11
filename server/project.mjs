@@ -5,6 +5,19 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import * as A from './astro-source.mjs';
 import * as W from './widgets.mjs';
+import { fileURLToPath } from 'node:url';
+
+const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'templates');
+const F = (label, type = 'text', placeholder = '', required = true, half = false, options = []) => ({ label, type, placeholder, required, half, options });
+/** Starting points for the form builder. */
+export const FORM_PRESETS = {
+  contact: { label: 'Contact', values: { eyebrow: 'Get in touch', title: 'Send us a message', text: 'Tell us a little about what you need and we will get back to you within one working day.', submitLabel: 'Send message', subject: 'New message from the website', fields: [F('Name', 'text', 'Ada Lovelace', true, true), F('Email', 'email', 'ada@example.com', true, true), F('Message', 'long text', 'How can we help?')] } },
+  newsletter: { label: 'Newsletter sign-up', values: { eyebrow: 'Newsletter', title: 'One thoughtful email a month', text: 'No tracking, no tricks. Unsubscribe in one click.', submitLabel: 'Subscribe', subject: 'New newsletter subscriber', successMessage: 'You are on the list. Thank you!', layout: 'plain', fields: [F('Email', 'email', 'you@example.com')] } },
+  signup: { label: 'Sign-up', values: { eyebrow: 'Join us', title: 'Create your account', text: 'It takes less than a minute.', submitLabel: 'Sign up', subject: 'New sign-up', fields: [F('First name', 'text', '', true, true), F('Last name', 'text', '', true, true), F('Email', 'email', 'you@example.com'), F('Company', 'text', '', false), F('I agree to the terms', 'checkbox')] } },
+  feedback: { label: 'Feedback', values: { eyebrow: 'Feedback', title: 'How did we do?', text: 'Two minutes of your time helps us get better.', submitLabel: 'Send feedback', subject: 'New feedback', fields: [F('How would you rate your experience?', 'choice', '', true, false, ['Excellent', 'Good', 'Fair', 'Poor']), F('What could we do better?', 'long text', '', false), F('Email (if you would like a reply)', 'email', 'you@example.com', false)] } },
+  quote: { label: 'Quote request', values: { eyebrow: 'Request a quote', title: 'Tell us about your project', text: 'Share a few details and we will reply with a quote within two working days.', submitLabel: 'Request quote', subject: 'New quote request', fields: [F('Name', 'text', '', true, true), F('Email', 'email', 'you@example.com', true, true), F('Phone', 'phone', '', false, true), F('Budget', 'dropdown', 'Choose a range', false, true, ['Under $1,000', '$1,000 – $5,000', '$5,000 – $20,000', 'Over $20,000']), F('When do you need it?', 'date', '', false, true), F('Project details', 'long text', 'What are you looking to build?')] } },
+  blank: { label: 'Blank (one field)', values: { title: 'A new form', text: 'Describe what this form is for.', fields: [F('Email', 'email', 'you@example.com')] } },
+};
 
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.ico']);
 const MEDIA_EXT = new Set([...IMAGE_EXT, '.mp4', '.webm', '.mp3', '.pdf', '.woff2']);
@@ -756,6 +769,23 @@ export class Project {
     for (let k = 2; this.exists(to); k++) to = `${base}-copy-${k}${ext}`;
     this.transaction(`Duplicate ${path.basename(file)}`, () => this.write(to, this.read(file)));
     return to;
+  }
+
+  /** Create a new form component from the builder's template, pre-filled from a preset. */
+  createForm({ name, preset }) {
+    const clean = String(name || '').replace(/[^A-Za-z0-9 ]/g, '').trim();
+    if (!clean) throw httpError(400, 'Give the form a name, like “Quote request”.');
+    let Name = clean.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+    if (!/^[A-Z]/.test(Name)) Name = 'Form' + Name;
+    if (!/form$/i.test(Name)) Name += 'Form';
+    const file = `src/components/forms/${Name}.astro`;
+    if (this.exists(file)) throw httpError(409, `A form called ${Name} already exists.`);
+    let src = fs.readFileSync(path.join(TEMPLATES, 'Form.astro'), 'utf8');
+    const p = FORM_PRESETS[preset] || FORM_PRESETS.contact;
+    for (const [k, v] of Object.entries(p.values)) src = W.setFieldDefault(src, k, v);
+    src = src.replace('// A form made with the form builder.', `// ${clean} — a form made with the form builder.`);
+    this.transaction(`Create form ${Name}`, () => this.write(file, src));
+    return { file };
   }
 
   createComponent({ name, folder, kind }) {

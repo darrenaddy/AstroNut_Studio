@@ -106,6 +106,37 @@ export function parseLiteral(text) {
   return { ok: false };
 }
 
+/** `'a' | 'b'` → ['a', 'b'] */
+const unionOf = (t) => (t && /^(['"][^'"]*['"]\s*\|\s*)+['"][^'"]*['"]$/.test(t.trim()) ? t.split('|').map((s) => s.trim().slice(1, -1)) : null);
+/** `name?: type;` pairs at the top level of an interface body. */
+function propTypes(body) {
+  const out = {};
+  let depth = 0;
+  let start = 0;
+  const flush = (end) => {
+    const seg = body.slice(start, end).replace(/\/\*[\s\S]*?\*\//g, '');
+    const t = /^\s*(\w+)\??\s*:\s*([\s\S]+?)\s*$/.exec(seg);
+    if (t) out[t[1]] = t[2];
+    start = end + 1;
+  };
+  for (let k = 0; k < body.length; k++) {
+    const c = body[k];
+    if (c === '"' || c === "'") k = skipString(body, k) - 1;
+    else if (c === '/' && body[k + 1] === '*') k = Math.max(k, body.indexOf('*/', k + 2) + 1);
+    else if ('{(<['.includes(c)) depth++;
+    else if ('})>]'.includes(c)) depth--;
+    else if ((c === ';' || c === '\n') && depth === 0) flush(k);
+  }
+  flush(body.length);
+  return out;
+}
+/** The `/** … *\/` comment written above each prop becomes its help text. */
+function propDocs(body) {
+  const out = {};
+  for (const m of body.matchAll(/\/\*\*([\s\S]*?)\*\/\s*(\w+)\??\s*:/g)) out[m[2]] = m[1].replace(/^\s*\*\s?/gm, '').replace(/\s+/g, ' ').trim();
+  return out;
+}
+
 const labelOf = (name) =>
   name
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
@@ -147,16 +178,18 @@ export function parseFields(src) {
   // interface Props { a?: string; b?: 'x' | 'y' }   (or: type Props = { ... })
   let iface = null;
   const types = {};
+  const docs = {};
+  let ifaceBody = '';
   const im = /\b(?:interface\s+Props\s*(?:extends\s+[^{]+)?|type\s+Props\s*=\s*)\{/.exec(fm);
   if (im) {
     const open = im.index + im[0].length - 1;
     const end = matchBracket(fm, open);
     if (end > 0) {
       iface = { bodyStart: fmStart + open + 1, bodyEnd: fmStart + end - 1 };
-      for (const line of fm.slice(open + 1, end - 1).split(/[;\n]/)) {
-        const t = /^\s*(\w+)\??\s*:\s*(.+?)\s*$/.exec(line);
-        if (t) types[t[1]] = t[2];
-      }
+      const body = fm.slice(open + 1, end - 1);
+      Object.assign(types, propTypes(body));
+      Object.assign(docs, propDocs(body));
+      ifaceBody = body;
     }
   }
   if (!destructure) return { ...empty, iface };
@@ -205,7 +238,7 @@ export function parseFields(src) {
     const rawDefault = eq < 0 ? null : text.slice(eq + 1).trim();
     const lit = rawDefault == null ? { ok: true, value: undefined } : parseLiteral(rawDefault);
     const declared = types[name] || '';
-    const union = declared && /^(['"][^'"]*['"]\s*\|\s*)+['"][^'"]*['"]$/.test(declared) ? declared.split('|').map((s) => s.trim().slice(1, -1)) : null;
+    const union = unionOf(declared);
     let type;
     let def = lit.ok ? lit.value : null;
     const list = !lit.ok && rawDefault != null ? parseJs(rawDefault) : { ok: false };
@@ -226,7 +259,27 @@ export function parseFields(src) {
     else type = 'text';
     if (def === undefined) def = type === 'toggle' ? false : type === 'number' ? null : '';
     const field = { name, label: labelOf(name), type, default: def };
-    if (type === 'list') Object.assign(field, listShape(src, doc, name, def));
+    if (docs[name]) field.help = docs[name];
+    if (type === 'list') {
+      Object.assign(field, listShape(src, doc, name, def));
+      // The item type in the interface (`fields?: Array<{ type: 'a' | 'b'; … }>`) adds choices and help text.
+      const im2 = new RegExp(`\\b${name}\\??\\s*:\\s*(?:Array<\\s*)?\\{`).exec(ifaceBody);
+      if (im2) {
+        const o = im2.index + im2[0].length - 1;
+        const e = matchBracket(ifaceBody, o);
+        if (e > 0) {
+          const inner = ifaceBody.slice(o + 1, e - 1);
+          const it = propTypes(inner);
+          const idocs = propDocs(inner);
+          for (const k of field.itemFields) {
+            const u = unionOf(it[k.name]);
+            if (u) Object.assign(k, { type: 'choice', options: u });
+            else if (it[k.name] === 'boolean') k.type = 'toggle';
+            if (idocs[k.name]) k.help = idocs[k.name];
+          }
+        }
+      }
+    }
     if (union) field.options = union;
     if (type === 'code') field.raw = rawDefault;
     fields.push(field);

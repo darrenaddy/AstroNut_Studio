@@ -306,6 +306,32 @@ function AssetsTab() {
       },
     });
 
+  const newForm = async () => {
+    const choices = await api.get('/forms/presets').catch(() => []);
+    useStore.setState({
+      dialog: {
+        type: 'prompt',
+        title: 'New form',
+        label: 'Form name',
+        placeholder: 'Quote request',
+        choices,
+        choiceLabel: 'Start from',
+        hint: 'The form is saved under Forms as its own widget. You then build it on the right: add, remove and reorder fields, and paste in your Formspree form ID so submissions reach you.',
+        confirm: 'Create form',
+        onSubmit: async (name: string, preset: string) => {
+          const r = await api.post('/forms', { name, preset });
+          await act().load();
+          const next = { ...openFolders, forms: true };
+          setOpen(next);
+          localStorage.setItem('astrophile:folders', JSON.stringify(next));
+          const c = useStore.getState().data.components.find((x: any) => x.file === r.file);
+          if (c) act().openComponent(c);
+          act().deselect();
+        },
+      },
+    });
+  };
+
   const row = (c: any, depth = 1) => (
     <div
       key={c.file}
@@ -371,6 +397,9 @@ function AssetsTab() {
             <span className="acts">
               <button className="icon-btn sm tip down" data-tip="Inventory — what is used where" onClick={() => useStore.setState({ inventoryOpen: true })}>
                 <ListTree size={15} />
+              </button>
+              <button className="icon-btn sm tip down" data-tip="New form — open the form builder" onClick={newForm}>
+                <FormInput size={15} />
               </button>
               <button className="icon-btn sm tip down" data-tip="New component" onClick={() => create('component')}>
                 <Plus size={15} />

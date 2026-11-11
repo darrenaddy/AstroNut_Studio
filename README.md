@@ -52,6 +52,14 @@ When you add something that other pages already use, you choose **Linked** (shar
 The **Inventory** (the list icon next to Components) shows every block, widget and layout, what kind it is, its fields, and which pages use it — including ones nothing uses.
 
 ### Keyboard
+### Forms
+
+The form icon next to Components opens the **form builder**: name the form, pick a starting point (contact, newsletter, sign-up, feedback, quote request or blank), and it is saved under Forms as its own widget. Build it in the right panel — add, remove and reorder fields; each field has a label, a type (text, email, phone, number, date, long text, dropdown, choice, checkbox, file), a placeholder, required on/off, and half-width on/off.
+
+Submissions are sent to [Formspree](https://formspree.io): paste your form's ID (the letters after `formspree.io/f/`) into **Send to**. Any other address that accepts form posts works too. The form is sent in the background and replaced by your thank-you message; if that isn't possible the browser submits it the ordinary way. Each form includes a hidden spam-trap field. File uploads need a Formspree plan that allows them.
+
+The starter's ContactForm and Newsletter have the same **Send to** setting.
+
 
 `V` select · `B` browse · `A` add element · `Enter` edit text · `Esc` select parent · `⌫` delete · `⌘D` duplicate · `⌥↑/↓` move · `⌘E` code · `⌘K` AI · `⌘Z` undo
 

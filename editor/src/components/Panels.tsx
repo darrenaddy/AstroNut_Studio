@@ -600,6 +600,7 @@ export function CodeEditor() {
 export function Dialog() {
   const d = useStore((s) => s.dialog);
   const [value, setValue] = useState(d?.value || '');
+  const [choice, setChoice] = useState(d?.choices?.[0]?.value || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const close = () => useStore.setState({ dialog: null });
@@ -608,7 +609,7 @@ export function Dialog() {
     setBusy(true);
     setError('');
     try {
-      await d.onSubmit(value.trim());
+      await d.onSubmit(value.trim(), choice);
       close();
     } catch (e: any) {
       setError(e.message || String(e));
@@ -672,6 +673,18 @@ export function Dialog() {
                   if (e.key === 'Escape') close();
                 }}
               />
+            </div>
+          </div>
+        )}
+        {d.choices && (
+          <div className="field">
+            <label>{d.choiceLabel}</label>
+            <div className="choices">
+              {d.choices.map((c: any) => (
+                <button key={c.value} className={choice === c.value ? 'on' : ''} onClick={() => setChoice(c.value)}>
+                  {c.label}
+                </button>
+              ))}
             </div>
           </div>
         )}
