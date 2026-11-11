@@ -14,6 +14,25 @@ const key = '/src/' + String(id).split('~').join('/') + '.astro';
 const mod = files[key] ? await files[key]() : null;
 const Comp = mod?.default;
 const isLayout = key.startsWith('/src/layouts/');
+
+// Some components can't render without data — a blog card needs a post, for
+// example. Lend them the first entry of each content collection under the usual
+// prop names so they can be previewed and styled on their own.
+const sample = {};
+try {
+  const configs = Object.values(import.meta.glob('/src/content.config.{ts,js,mjs}', { eager: true }));
+  const names = Object.keys(configs[0]?.collections || {});
+  if (names.length) {
+    const { getCollection } = await import('astro:content');
+    for (const name of names) {
+      const first = (await getCollection(name))[0];
+      if (!first) continue;
+      for (const prop of [name, name.replace(/s$/, ''), 'post', 'entry', 'item', 'article', 'doc']) sample[prop] ??= first;
+    }
+  }
+} catch {
+  /* no collections, or none readable — preview without sample data */
+}
 ---
 
 {
@@ -36,7 +55,7 @@ const isLayout = key.startsWith('/src/layouts/');
         <title>{id}</title>
       </head>
       <body class="bg-bg text-fg antialiased">
-        <Comp>
+        <Comp {...sample}>
           <p style="padding:1rem;border:1px dashed currentColor;opacity:.5;border-radius:8px;font-family:system-ui;font-size:.875rem">slot content</p>
         </Comp>
       </body>
