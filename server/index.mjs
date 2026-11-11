@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Project, httpError } from './project.mjs';
 import { DevServer } from './dev.mjs';
-import { Assistant, publicSettings, saveSettings } from './ai.mjs';
+import { Assistant, chatgpt, invalidateModels, listModels, publicSettings, saveProviders, saveSettings, setModel } from './ai.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const editorRoot = path.join(here, '..', 'editor');
@@ -28,6 +28,7 @@ const broadcast = (ev) => {
   for (const res of clients) res.write(data);
 };
 const dev = new DevServer(projectRoot, broadcast);
+project.routes = () => dev.routes;
 const assistant = new Assistant(project);
 project.on((ev) => broadcast({ ...ev, history: project.historyState() }));
 
@@ -72,6 +73,8 @@ api.get('/events', (req, res) => {
 api.get('/outline', wrap((req) => project.outline(String(req.query.file))));
 api.post('/node', wrap((req) => project.nodeInfo(req.body.file, req.body.ref)));
 api.post('/op', wrap((req) => project.op(req.body)));
+api.post('/placement', wrap((req) => project.placementFor(req.body)));
+api.get('/fields', wrap((req) => ({ fields: project.fieldsOf(String(req.query.file)) })));
 api.post('/undo', wrap(() => ({ step: project.undo()?.label ?? null, history: project.historyState() })));
 api.post('/redo', wrap(() => ({ step: project.redo()?.label ?? null, history: project.historyState() })));
 
@@ -114,9 +117,20 @@ api.post('/build', wrap(() => dev.build()));
 api.get('/settings', wrap(() => publicSettings()));
 api.put('/settings', wrap((req) => {
   const patch = {};
-  for (const k of ['apiKey', 'model', 'effort']) if (k in req.body) patch[k] = typeof req.body[k] === 'string' ? req.body[k].trim() : null;
+  for (const k of ['apiKey', 'effort']) if (k in req.body) patch[k] = typeof req.body[k] === 'string' ? req.body[k].trim() : null;
   saveSettings(patch);
+  if (req.body.providers) saveProviders(req.body.providers);
+  if (req.body.model) setModel(typeof req.body.model === 'string' ? { provider: 'anthropic', id: req.body.model } : req.body.model);
   return publicSettings();
+}));
+api.get('/ai/models', wrap((req) => listModels(req.query.refresh === '1')));
+// "Sign in with ChatGPT": use a ChatGPT plan instead of an API key.
+api.get('/ai/chatgpt', wrap(() => chatgpt.status()));
+api.post('/ai/chatgpt/signin', wrap(() => chatgpt.startSignIn()));
+api.post('/ai/chatgpt/signout', wrap(async () => {
+  const out = await chatgpt.signOut();
+  invalidateModels();
+  return out;
 }));
 api.post('/ai/chat', async (req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });

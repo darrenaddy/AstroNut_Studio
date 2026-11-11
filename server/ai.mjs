@@ -3,12 +3,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { loadConfig } from '@anthropic-ai/sdk/lib/credentials';
 import fs from 'node:fs';
+import { ChatGPTAuth, AuthError, API_BASE as OPENAI_API_BASE } from './chatgpt.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const SETTINGS_DIR = path.join(here, '..', '.astrolabe');
+const SETTINGS_DIR = process.env.ASTROLABE_HOME || path.join(here, '..', '.astrolabe');
 const SETTINGS_FILE = path.join(SETTINGS_DIR, 'settings.json');
+export const chatgpt = new ChatGPTAuth(SETTINGS_DIR);
 
 export const MODELS = [
   { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', note: 'Best balance — recommended' },
@@ -32,6 +34,116 @@ export function saveSettings(patch) {
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), { mode: 0o600 });
   return next;
 }
+// ---- providers ---------------------------------------------------------------
+// Claude is built in. Everything else is reached through the OpenAI-compatible
+// "chat completions" protocol, which local runtimes (Ollama, LM Studio) and most
+// hosted services speak — so one adapter covers them all.
+export const PROVIDERS = [
+  { id: 'anthropic', label: 'Claude (Anthropic)', kind: 'anthropic' },
+  { id: 'chatgpt', label: 'ChatGPT plan (sign in)', kind: 'responses' },
+  { id: 'ollama', label: 'Ollama (this Mac)', kind: 'openai', local: true, baseUrl: 'http://localhost:11434/v1' },
+  { id: 'lmstudio', label: 'LM Studio (this Mac)', kind: 'openai', local: true, baseUrl: 'http://localhost:1234/v1' },
+  { id: 'openai', label: 'OpenAI', kind: 'openai', baseUrl: 'https://api.openai.com/v1', env: 'OPENAI_API_KEY' },
+  { id: 'openrouter', label: 'OpenRouter', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1', env: 'OPENROUTER_API_KEY' },
+  { id: 'custom', label: 'Custom endpoint', kind: 'openai', baseUrl: '' },
+];
+
+/** A provider preset merged with what the user saved for it. */
+function providerConfig(id, settings = loadSettings()) {
+  const preset = PROVIDERS.find((p) => p.id === id);
+  if (!preset) return null;
+  const saved = settings.providers?.[id] || {};
+  const baseUrl = String(saved.baseUrl || preset.baseUrl || '').replace(/\/+$/, '');
+  const apiKey = saved.apiKey || (preset.env && process.env[preset.env]) || '';
+  if (preset.kind === 'responses') return { ...preset, baseUrl: OPENAI_API_BASE, apiKey: '', enabled: chatgpt.status().sharing };
+  return { ...preset, baseUrl, apiKey, enabled: preset.kind === 'anthropic' || (!!baseUrl && (preset.local || !!apiKey || id === 'custom')) };
+}
+
+/** The model in use: { provider, id }. Older settings stored a bare Claude model name. */
+function currentModel(settings = loadSettings()) {
+  const m = settings.model;
+  if (m && typeof m === 'object' && m.provider && m.id && PROVIDERS.some((p) => p.id === m.provider)) return { provider: m.provider, id: m.id };
+  return { provider: 'anthropic', id: typeof m === 'string' && m ? m : DEFAULT_MODEL };
+}
+
+let modelCache = { at: 0, value: null };
+/** Every model that can be picked right now, across all providers. */
+export async function listModels(force = false) {
+  if (!force && modelCache.value && Date.now() - modelCache.at < 8000) return modelCache.value;
+  const settings = loadSettings();
+  const auth = await anthropicAuth(settings);
+  const models = MODELS.map((m) => ({ provider: 'anthropic', id: m.id, label: m.label, note: m.note }));
+  const providers = [{ id: 'anthropic', label: 'Claude (Anthropic)', status: auth.source ? 'ready' : 'needs sign-in', count: MODELS.length }];
+  const gpt = chatgpt.status();
+  const gptRow = { id: 'chatgpt', label: 'ChatGPT plan (sign in)', signIn: true, ...gpt, status: !gpt.signedIn ? 'not signed in' : !gpt.sharing ? 'plan usage not granted' : 'ready', count: 0 };
+  providers.push(gptRow);
+  await Promise.all([
+    (async () => {
+      if (!gpt.sharing) return;
+      try {
+        const list = await chatgpt.models();
+        for (const m of list) models.push({ provider: 'chatgpt', id: m.id, label: m.label, note: 'ChatGPT plan' });
+        gptRow.count = list.length;
+        if (!list.length) gptRow.status = 'no models available';
+      } catch (e) {
+        gptRow.status = e instanceof AuthError ? 'sign in again' : 'unreachable';
+      }
+    })(),
+    ...PROVIDERS.filter((p) => p.kind === 'openai').map(async (preset) => {
+      const cfg = providerConfig(preset.id, settings);
+      const row = { id: cfg.id, label: cfg.label, local: !!cfg.local, baseUrl: cfg.baseUrl, hasKey: !!cfg.apiKey, keyHint: settings.providers?.[cfg.id]?.apiKey ? '••••' + cfg.apiKey.slice(-4) : cfg.apiKey ? 'from environment' : null, status: 'not set up', count: 0 };
+      providers.push(row);
+      if (!cfg.enabled) return;
+      try {
+        const res = await fetch(cfg.baseUrl + '/models', { headers: cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}, signal: AbortSignal.timeout(cfg.local ? 1200 : 6000) });
+        if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'key rejected' : `error ${res.status}`);
+        const data = await res.json();
+        const ids = (data.data || data.models || []).map((m) => m.id || m.name).filter(Boolean).sort();
+        for (const id of ids) models.push({ provider: cfg.id, id, label: id, note: cfg.label });
+        row.status = ids.length ? 'ready' : 'no models installed';
+        row.count = ids.length;
+      } catch (e) {
+        row.status = cfg.local ? 'not running' : /key rejected|error \d+/.test(e.message) ? e.message : 'unreachable';
+      }
+    }),
+  ]);
+  providers.sort((x, y) => PROVIDERS.findIndex((p) => p.id === x.id) - PROVIDERS.findIndex((p) => p.id === y.id));
+  modelCache = { at: Date.now(), value: { models, providers, current: currentModel(settings) } };
+  return modelCache.value;
+}
+
+/** Merge provider connection details ({ id: { baseUrl, apiKey } }) into the saved settings. */
+export function saveProviders(patch) {
+  const settings = loadSettings();
+  const providers = { ...(settings.providers || {}) };
+  for (const [id, cfg] of Object.entries(patch || {})) {
+    if (!PROVIDERS.some((p) => p.id === id && p.kind === 'openai')) continue;
+    const next = { ...(providers[id] || {}) };
+    for (const k of ['baseUrl', 'apiKey']) {
+      if (!(k in cfg)) continue;
+      const v = typeof cfg[k] === 'string' ? cfg[k].trim() : '';
+      if (v) next[k] = v;
+      else delete next[k];
+    }
+    if (Object.keys(next).length) providers[id] = next;
+    else delete providers[id];
+  }
+  fs.mkdirSync(SETTINGS_DIR, { recursive: true });
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ ...settings, providers }, null, 2), { mode: 0o600 });
+  modelCache.at = 0;
+}
+
+/** Switch model. Accepts { provider, id }. */
+export const invalidateModels = () => {
+  modelCache.at = 0;
+};
+
+export function setModel(model) {
+  if (!model?.provider || !model?.id || !PROVIDERS.some((p) => p.id === model.provider)) throw new Error('Unknown model.');
+  saveSettings({ model: { provider: model.provider, id: String(model.id) } });
+  modelCache.at = 0;
+}
+
 // A login profile created by `ant auth login` (OAuth, no static key). The SDK
 // picks it up by itself when no key is given; this only reports that it exists.
 async function loginProfile() {
@@ -42,15 +154,27 @@ async function loginProfile() {
     return null;
   }
 }
-export async function publicSettings() {
-  const s = loadSettings();
+async function anthropicAuth(s = loadSettings()) {
   const envKey = !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
   const login = !s.apiKey && !envKey && !!(await loginProfile());
+  return { source: s.apiKey ? 'saved' : envKey ? 'environment' : login ? 'login' : null };
+}
+export async function publicSettings() {
+  const s = loadSettings();
+  const auth = await anthropicAuth(s);
+  const cur = currentModel(s);
+  const cfg = providerConfig(cur.provider, s);
+  const known = MODELS.find((m) => cur.provider === 'anthropic' && m.id === cur.id);
   return {
-    model: s.model || DEFAULT_MODEL,
+    provider: cur.provider,
+    providerLabel: cfg.label,
+    model: cur.id,
+    modelLabel: known ? known.label : cur.id,
+    local: !!cfg.local,
     effort: s.effort || 'medium',
-    hasKey: !!s.apiKey || envKey || login,
-    keySource: s.apiKey ? 'saved' : envKey ? 'environment' : login ? 'login' : null,
+    // "hasKey" = the selected provider has what it needs to be called
+    hasKey: cur.provider === 'anthropic' ? !!auth.source : cfg.enabled,
+    keySource: auth.source,
     keyHint: s.apiKey ? '••••' + s.apiKey.slice(-4) : null,
     models: MODELS,
     mock: !!process.env.ASTROLABE_MOCK_AI,
@@ -109,6 +233,7 @@ function systemPrompt(project) {
 - Read a file before you change it. Use edit_file for targeted changes and write_file for new files or full rewrites.
 - Match the conventions already in the project: Tailwind utility classes in the markup, no separate CSS files per component, the same spacing rhythm and tokens the neighbouring blocks use.
 - Keep text content as literal text in the markup where you can (rather than hiding it in props or arrays) — the visual editor lets people double-click literal text to edit it. Repeated data-driven lists are fine when there are many items.
+- Some components are "widgets": they take their content from props with defaults, declared as 'const { title = "…", image = "/media/x.svg" } = Astro.props;' and shown as '{title}'. A page sets its own values as attributes ('<Hero title="Simple pricing" />'); omitted ones fall back to the default. To change what one page shows, edit that page's attributes, not the widget's defaults. When one design needs different content on different pages, make it a widget this way rather than duplicating the file. Repeating items are a list field: an array of plain objects as the default (features = [{ title: \"…\", text: \"…\" }]) rendered with features.map((item) => …); a page overrides it with features={[…]}.
 - To add a section to a page: create (or reuse) a component in src/components/<category>/, import it in the page's frontmatter, and place its tag where it belongs.
 - Write real, specific copy that suits the site — never lorem ipsum. Make designs responsive (mobile first, then sm:/md:/lg:), accessible (alt text, labelled controls, sensible heading order), and good-looking in both light and dark mode.
 - Do not add npm dependencies or client-side frameworks; plain Astro, HTML, Tailwind and small inline <script> tags only. Do not touch package.json, astro.config.*, or anything outside the project.
@@ -140,11 +265,13 @@ function contextBlock(project, ctx) {
 export class Assistant {
   constructor(project) {
     this.project = project;
-    this.messages = [];
+    // The conversation is kept as plain text turns so it carries over when the
+    // model or provider changes mid-conversation.
+    this.history = [];
     this.running = null;
   }
   reset() {
-    this.messages = [];
+    this.history = [];
   }
   abort() {
     this.running?.abort();
@@ -208,106 +335,307 @@ export class Assistant {
     const controller = new AbortController();
     this.running = controller;
     const changed = new Set();
+    const cur = currentModel(settings);
+    const provider = providerConfig(cur.provider, settings);
     const userText = `${contextBlock(this.project, context)}\n\n${prompt}`;
-    const startLen = this.messages.length;
-    this.messages.push({ role: 'user', content: userText });
     const label = 'AI: ' + (prompt.length > 48 ? prompt.slice(0, 48) + '…' : prompt);
+    let reply = '';
+    const emit = (ev) => {
+      if (ev.type === 'text') reply += ev.delta;
+      send(ev);
+    };
+    const remember = (suffix = '') => {
+      const note = changed.size ? `\n[Files changed in this turn: ${[...changed].join(', ')}]` : '';
+      this.history.push({ role: 'user', content: userText }, { role: 'assistant', content: (reply.trim() || '(no reply)') + note + suffix });
+      if (this.history.length > 40) this.history.splice(0, this.history.length - 40);
+    };
 
     try {
       await this.project.transaction(label, async () => {
-        if (process.env.ASTROLABE_MOCK_AI) return this.mock(prompt, context, send, changed);
-        // Without a saved key the SDK resolves credentials itself: ANTHROPIC_API_KEY,
-        // ANTHROPIC_AUTH_TOKEN, then the `ant auth login` OAuth profile.
-        const client = new Anthropic(settings.apiKey ? { apiKey: settings.apiKey } : {});
-        const model = settings.model || DEFAULT_MODEL;
-        let useFallbacks = !/haiku/.test(model);
-        let jsonRetries = 0;
-
-        for (let turn = 0; turn < 40; turn++) {
-          const base = {
-            model,
-            max_tokens: 64000,
-            system: systemPrompt(this.project),
-            cache_control: { type: 'ephemeral' },
-            thinking: { type: 'adaptive', display: 'summarized' },
-            output_config: { effort: settings.effort || 'medium' },
-            tools: TOOLS,
-            messages: this.messages,
-          };
-          // Server-side refusal fallbacks are on by default; if this account or
-          // model rejects the beta, quietly continue without it.
-          const stream = useFallbacks
-            ? client.beta.messages.stream({ ...base, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }, { signal: controller.signal })
-            : client.messages.stream(base, { signal: controller.signal });
-
-          let message;
-          try {
-            for await (const event of stream) {
-              if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') send({ type: 'tool', id: event.content_block.id, name: event.content_block.name, status: 'writing' });
-              else if (event.type === 'content_block_delta') {
-                if (event.delta.type === 'text_delta') send({ type: 'text', delta: event.delta.text });
-                else if (event.delta.type === 'thinking_delta') send({ type: 'thinking', delta: event.delta.thinking });
-              }
-            }
-            message = await stream.finalMessage();
-            jsonRetries = 0;
-          } catch (err) {
-            if (useFallbacks && err instanceof Anthropic.BadRequestError && turn === 0) {
-              useFallbacks = false;
-              turn--;
-              continue;
-            }
-            if (err instanceof Anthropic.APIError || controller.signal.aborted || jsonRetries++ >= 2) throw err;
-            continue; // a tool input was not parseable JSON — re-issue the turn
-          }
-
-          if (message.stop_reason === 'refusal') {
-            send({ type: 'text', delta: "\n\nI can't help with that request." });
-            break;
-          }
-          this.messages.push({ role: 'assistant', content: message.content });
-          if (message.stop_reason === 'pause_turn') continue;
-
-          const calls = message.content.filter((b) => b.type === 'tool_use');
-          if (!calls.length) break;
-          if (message.stop_reason === 'max_tokens') {
-            this.messages.push({ role: 'user', content: calls.map((c) => ({ type: 'tool_result', tool_use_id: c.id, is_error: true, content: 'Your output was cut off before this tool call was complete, so it was not run. Split the work into smaller writes.' })) });
-            continue;
-          }
-
-          const results = [];
-          for (const call of calls) {
-            const r = this.runTool(call.name, call.input, changed);
-            send({ type: 'tool', id: call.id, name: call.name, path: call.input?.path || call.input?.dir || '', status: r.error ? 'error' : 'done', summary: r.error || r.summary });
-            results.push({ type: 'tool_result', tool_use_id: call.id, content: r.error || r.text, ...(r.error ? { is_error: true } : {}) });
-          }
-          this.messages.push({ role: 'user', content: results });
-        }
+        const run = { settings, model: cur.id, provider, userText, emit, changed, signal: controller.signal };
+        if (process.env.ASTROLABE_MOCK_AI) return this.mock(prompt, context, emit, changed);
+        if (provider.kind === 'anthropic') return this.runAnthropic(run);
+        if (provider.kind === 'responses') return this.runResponses(run);
+        return this.runOpenAI(run);
       });
+      remember();
       send({ type: 'done', changed: [...changed] });
     } catch (err) {
-      // Drop the unfinished turn so the conversation stays valid for the next prompt.
-      const last = this.messages.at(-1);
       if (controller.signal.aborted) {
-        if (last?.role === 'assistant' && Array.isArray(last.content) && last.content.some((b) => b.type === 'tool_use')) this.messages.pop();
-        if (this.messages.at(-1)?.role === 'user') this.messages.push({ role: 'assistant', content: '(stopped by the user)' });
+        remember('\n(stopped by the user)');
         send({ type: 'done', changed: [...changed], stopped: true });
       } else {
-        this.messages.length = startLen;
-        let message = err?.message || String(err);
-        let code = 'error';
-        if (err instanceof Anthropic.AuthenticationError || /api[_ ]key|authentication|credentials/i.test(message)) {
-          code = 'auth';
-          message = 'Not signed in to the Claude API. Run `ant auth login` in a terminal (again, if your login has expired), or add an API key in Settings.';
-        } else if (err instanceof Anthropic.PermissionDeniedError) message = `Your account isn't allowed to use this model. Pick another model in Settings. (${err.message})`;
-        else if (err instanceof Anthropic.NotFoundError) message = `That model isn't available to your account. Pick another model in Settings.`;
-        else if (err instanceof Anthropic.RateLimitError) message = 'Rate limited by the Claude API — wait a moment and try again.';
-        else if (err instanceof Anthropic.APIConnectionError) message = "Couldn't reach the Claude API. Check your internet connection.";
-        else if (err instanceof Anthropic.APIError) message = `Claude API error ${err.status ?? ''}: ${err.message}`;
+        const { code, message } = describeError(err, provider);
         send({ type: 'error', code, message, changed: [...changed] });
       }
     } finally {
       this.running = null;
+    }
+  }
+
+  // ---- Claude ------------------------------------------------------------------
+  async runAnthropic({ settings, model, userText, emit, changed, signal }) {
+    // Without a saved key the SDK resolves credentials itself: ANTHROPIC_API_KEY,
+    // ANTHROPIC_AUTH_TOKEN, then the `ant auth login` OAuth profile.
+    const client = new Anthropic(settings.apiKey ? { apiKey: settings.apiKey } : {});
+    const messages = [...this.history, { role: 'user', content: userText }];
+    let useFallbacks = !/haiku/.test(model);
+    let jsonRetries = 0;
+
+    for (let turn = 0; turn < 40; turn++) {
+      const base = {
+        model,
+        max_tokens: 64000,
+        system: systemPrompt(this.project),
+        cache_control: { type: 'ephemeral' },
+        thinking: { type: 'adaptive', display: 'summarized' },
+        output_config: { effort: settings.effort || 'medium' },
+        tools: TOOLS,
+        messages,
+      };
+      // Server-side refusal fallbacks are on by default; if this account or
+      // model rejects the beta, quietly continue without it.
+      const stream = useFallbacks ? client.beta.messages.stream({ ...base, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }, { signal }) : client.messages.stream(base, { signal });
+
+      let message;
+      try {
+        for await (const event of stream) {
+          if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') emit({ type: 'tool', id: event.content_block.id, name: event.content_block.name, status: 'writing' });
+          else if (event.type === 'content_block_delta') {
+            if (event.delta.type === 'text_delta') emit({ type: 'text', delta: event.delta.text });
+            else if (event.delta.type === 'thinking_delta') emit({ type: 'thinking', delta: event.delta.thinking });
+          }
+        }
+        message = await stream.finalMessage();
+        jsonRetries = 0;
+      } catch (err) {
+        if (useFallbacks && err instanceof Anthropic.BadRequestError && turn === 0 && !/credit balance/i.test(err.message)) {
+          useFallbacks = false;
+          turn--;
+          continue;
+        }
+        if (err instanceof Anthropic.APIError || signal.aborted || jsonRetries++ >= 2) throw err;
+        continue; // a tool input was not parseable JSON — re-issue the turn
+      }
+
+      if (message.stop_reason === 'refusal') {
+        emit({ type: 'text', delta: "\n\nI can't help with that request." });
+        break;
+      }
+      messages.push({ role: 'assistant', content: message.content });
+      if (message.stop_reason === 'pause_turn') continue;
+
+      const calls = message.content.filter((b) => b.type === 'tool_use');
+      if (!calls.length) break;
+      if (message.stop_reason === 'max_tokens') {
+        messages.push({ role: 'user', content: calls.map((c) => ({ type: 'tool_result', tool_use_id: c.id, is_error: true, content: 'Your output was cut off before this tool call was complete, so it was not run. Split the work into smaller writes.' })) });
+        continue;
+      }
+
+      const results = [];
+      for (const call of calls) {
+        const r = this.runTool(call.name, call.input, changed);
+        emit({ type: 'tool', id: call.id, name: call.name, path: call.input?.path || call.input?.dir || '', status: r.error ? 'error' : 'done', summary: r.error || r.summary });
+        results.push({ type: 'tool_result', tool_use_id: call.id, content: r.error || r.text, ...(r.error ? { is_error: true } : {}) });
+      }
+      messages.push({ role: 'user', content: results });
+    }
+  }
+
+  // ---- ChatGPT plan, through OpenAI's Responses API ------------------------------
+  async runResponses({ model, provider, userText, emit, changed, signal }) {
+    const tools = TOOLS.map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: t.input_schema, strict: false }));
+    const input = [...this.history.map((m) => ({ role: m.role, content: m.content })), { role: 'user', content: userText }];
+
+    for (let turn = 0; turn < 40; turn++) {
+      const token = await chatgpt.accessToken();
+      let res;
+      try {
+        // This flow requires store:false and stream:true on every request.
+        res = await fetch(provider.baseUrl + '/responses', { method: 'POST', signal, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, instructions: systemPrompt(this.project), input, tools, store: false, stream: true }) });
+      } catch (e) {
+        if (signal.aborted) throw e;
+        throw new ProviderError('connect', "Couldn't reach OpenAI. Check your internet connection.");
+      }
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        let err = {};
+        try {
+          const j = JSON.parse(body);
+          err = j.error && typeof j.error === 'object' ? j.error : { message: j.detail || j.message || body };
+        } catch {}
+        throw chatgptError(err.code, err.message || body.slice(0, 300), res.status, err.param);
+      }
+
+      let text = '';
+      let completed = false;
+      const calls = [];
+      const handle = (payload) => {
+        let ev;
+        try {
+          ev = JSON.parse(payload);
+        } catch {
+          return;
+        }
+        switch (ev.type) {
+          case 'response.output_text.delta':
+            text += ev.delta || '';
+            emit({ type: 'text', delta: ev.delta || '' });
+            break;
+          case 'response.reasoning_summary_text.delta':
+            emit({ type: 'thinking', delta: ev.delta || '' });
+            break;
+          case 'response.output_item.added':
+            if (ev.item?.type === 'function_call') emit({ type: 'tool', id: ev.item.call_id || ev.item.id, name: ev.item.name, status: 'writing' });
+            break;
+          case 'response.output_item.done':
+            if (ev.item?.type === 'function_call') calls.push({ id: ev.item.call_id || ev.item.id, name: ev.item.name, args: ev.item.arguments || '{}' });
+            break;
+          case 'response.completed':
+            completed = true;
+            break;
+          case 'response.incomplete':
+            completed = true;
+            if (!calls.length) emit({ type: 'text', delta: '\n\n(The reply was cut off before it finished.)' });
+            break;
+          case 'response.failed':
+            throw chatgptError(ev.response?.error?.code, ev.response?.error?.message, 0);
+          case 'error':
+            throw chatgptError(ev.code || ev.error?.code, ev.message || ev.error?.message, 0);
+        }
+      };
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (line.startsWith('data:')) handle(line.slice(5).trim());
+        }
+      }
+      if (buf.trim().startsWith('data:')) handle(buf.trim().slice(5).trim());
+      if (!completed) throw new ProviderError('connect', 'The connection to OpenAI dropped before the reply finished. Try again.');
+
+      if (!calls.length) break;
+      if (text) input.push({ role: 'assistant', content: text });
+      for (const call of calls) input.push({ type: 'function_call', call_id: call.id, name: call.name, arguments: call.args });
+      for (const call of calls) {
+        let parsed = null;
+        let r;
+        try {
+          parsed = JSON.parse(call.args || '{}');
+          r = this.runTool(call.name, parsed, changed);
+        } catch {
+          r = { error: 'The tool arguments were not valid JSON. Send the call again with a complete JSON object.' };
+        }
+        emit({ type: 'tool', id: call.id, name: call.name, path: parsed?.path || parsed?.dir || '', status: r.error ? 'error' : 'done', summary: r.error || r.summary });
+        input.push({ type: 'function_call_output', call_id: call.id, output: r.error ? `Error: ${r.error}` : r.text });
+      }
+    }
+  }
+
+  // ---- any OpenAI-compatible endpoint (Ollama, LM Studio, OpenAI, OpenRouter, …) ----
+  async runOpenAI({ model, provider, userText, emit, changed, signal }) {
+    if (!provider.baseUrl) throw new ProviderError('setup', `${provider.label} has no address yet. Add one in Settings.`);
+    const tools = TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } }));
+    const messages = [{ role: 'system', content: systemPrompt(this.project) }, ...this.history, { role: 'user', content: userText }];
+    const headers = { 'Content-Type': 'application/json', ...(provider.apiKey ? { Authorization: `Bearer ${provider.apiKey}` } : {}) };
+
+    for (let turn = 0; turn < 40; turn++) {
+      let res;
+      try {
+        res = await fetch(provider.baseUrl + '/chat/completions', { method: 'POST', headers, signal, body: JSON.stringify({ model, messages, tools, stream: true }) });
+      } catch (e) {
+        if (signal.aborted) throw e;
+        throw new ProviderError('connect', provider.local ? `Couldn't reach ${provider.label} at ${provider.baseUrl}. Is it running?` : `Couldn't reach ${provider.label}. Check your internet connection.`);
+      }
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        let detail = body;
+        try {
+          const j = JSON.parse(body);
+          detail = j.error?.message || j.error || j.message || body;
+        } catch {}
+        detail = String(typeof detail === 'string' ? detail : JSON.stringify(detail)).slice(0, 300);
+        if (res.status === 401 || res.status === 403) throw new ProviderError('auth', `${provider.label} rejected the API key. Check it in Settings.`);
+        if (/does not support tools|tool.*not supported|tools.*not supported/i.test(detail)) throw new ProviderError('tools', `The model “${model}” can't use tools, which the assistant needs to edit files. Pick a tool-capable model with /model (for local use: qwen3, qwen2.5-coder, llama3.3 or similar).`);
+        if (res.status === 404) throw new ProviderError('model', `${provider.label} doesn't have a model called “${model}”. Type /model to see what is available.`);
+        throw new ProviderError('error', `${provider.label} error ${res.status}: ${detail}`);
+      }
+
+      // Read the event stream, collecting text and (possibly fragmented) tool calls.
+      let text = '';
+      const calls = [];
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      const handle = (line) => {
+        if (!line.startsWith('data:')) return;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') return;
+        let chunk;
+        try {
+          chunk = JSON.parse(payload);
+        } catch {
+          return;
+        }
+        if (chunk.error) throw new ProviderError('error', `${provider.label}: ${chunk.error.message || JSON.stringify(chunk.error)}`);
+        const delta = chunk.choices?.[0]?.delta;
+        if (!delta) return;
+        const thinking = delta.reasoning_content || delta.reasoning;
+        if (typeof thinking === 'string' && thinking) emit({ type: 'thinking', delta: thinking });
+        if (typeof delta.content === 'string' && delta.content) {
+          text += delta.content;
+          emit({ type: 'text', delta: delta.content });
+        }
+        for (const [k, tc] of (delta.tool_calls || []).entries()) {
+          // Most servers number fragments with `index`; a few send whole calls without one.
+          const i = typeof tc.index === 'number' ? tc.index : tc.id && calls.some((c) => c && c.id !== tc.id) && !calls.some((c) => c && c.id === tc.id) ? calls.length : tc.id ? Math.max(0, calls.findIndex((c) => c && c.id === tc.id)) : Math.max(0, calls.length - 1);
+          if (!calls[i]) {
+            calls[i] = { id: tc.id || `call_${turn}_${i}`, name: '', args: '' };
+          }
+          if (tc.id) calls[i].id = tc.id;
+          if (tc.function?.name && !calls[i].name) {
+            calls[i].name = tc.function.name;
+            emit({ type: 'tool', id: calls[i].id, name: calls[i].name, status: 'writing' });
+          }
+          const a = tc.function?.arguments;
+          if (typeof a === 'string') calls[i].args += a;
+          else if (a && typeof a === 'object') calls[i].args = JSON.stringify(a);
+        }
+      };
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          handle(buf.slice(0, nl).trim());
+          buf = buf.slice(nl + 1);
+        }
+      }
+      if (buf.trim()) handle(buf.trim());
+
+      const made = calls.filter((c) => c && c.name);
+      if (!made.length) break;
+      messages.push({ role: 'assistant', content: text || null, tool_calls: made.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.args || '{}' } })) });
+      for (const call of made) {
+        let input = null;
+        let r;
+        try {
+          input = JSON.parse(call.args || '{}');
+          r = this.runTool(call.name, input, changed);
+        } catch {
+          r = { error: 'The tool arguments were not valid JSON. Send the call again with a complete JSON object.' };
+        }
+        emit({ type: 'tool', id: call.id, name: call.name, path: input?.path || input?.dir || '', status: r.error ? 'error' : 'done', summary: r.error || r.summary });
+        messages.push({ role: 'tool', tool_call_id: call.id, content: r.error ? `Error: ${r.error}` : r.text });
+      }
     }
   }
 
@@ -335,6 +663,55 @@ export class Assistant {
       send({ type: 'tool', id: 'm2', name: 'edit_file', path: file, status: e.error ? 'error' : 'done', summary: e.error || e.summary });
     }
     await say(`(Mock assistant — no API key is being used.) You asked: “${prompt}”. I read ${file}${m ? ' and added a ✦ to its main heading so you can see an edit land. Use undo to revert it.' : '.'}`);
-    this.messages.push({ role: 'assistant', content: 'mock reply' });
   }
+}
+
+/** Plain-language versions of the errors OpenAI documents for ChatGPT plan usage. */
+function chatgptError(code, message, status, param) {
+  const usage = ' You can check it at chatgpt.com/settings/usage.';
+  switch (code) {
+    case 'subscription_sharing_usage_limit_exceeded':
+      return new ProviderError('limit', 'You have reached your ChatGPT plan’s usage limit for now.' + usage + ' Type /model to switch to another provider in the meantime.');
+    case 'subscription_sharing_user_not_eligible':
+      return new ProviderError('eligible', 'This ChatGPT account can’t use its plan in other apps (it needs an eligible Plus or Pro plan, and a workspace may restrict it). Type /model to use another provider.');
+    case 'subscription_sharing_usage_unavailable':
+    case 'subscription_sharing_user_unavailable':
+      return new ProviderError('connect', 'ChatGPT couldn’t check your plan usage just now. Try again in a moment.');
+    case 'subscription_sharing_unsupported_capability':
+      return new ProviderError('error', `ChatGPT plan usage doesn’t support something in this request${param ? ` (${param})` : ''}. Try a different model with /model.`);
+    case 'subscription_sharing_invalid_user':
+    case 'chatpass_v2_scope_not_authorized':
+    case 'chatpass_v2_invalid_authorization_context':
+      return new ProviderError('auth', 'ChatGPT didn’t accept this sign-in. Sign out and sign in again from Settings, and allow plan usage when asked.');
+  }
+  if (status === 401) return new ProviderError('auth', 'ChatGPT didn’t accept this sign-in. Sign in again from Settings.');
+  if (status === 404) return new ProviderError('model', 'That model isn’t available on your ChatGPT plan. Type /model to pick another.');
+  return new ProviderError('error', `ChatGPT error${status ? ' ' + status : ''}: ${String(message || code || 'unknown').slice(0, 300)}`);
+}
+
+class ProviderError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
+/** Turn whatever went wrong into one plain sentence for the chat panel. */
+function describeError(err, provider) {
+  if (err instanceof ProviderError || err instanceof AuthError) return { code: err.code, message: err.message };
+  let message = err?.message || String(err);
+  let code = 'error';
+  if (provider.kind !== 'anthropic') return { code, message: `${provider.label}: ${message}` };
+  if (err instanceof Anthropic.AuthenticationError || /api[_ ]key|authentication|credentials/i.test(message)) {
+    code = 'auth';
+    message = 'Not signed in to the Claude API. Run `ant auth login` in a terminal (again, if your login has expired), or add an API key in Settings. Or type /model to use a different provider.';
+  } else if (err instanceof Anthropic.PermissionDeniedError) message = `Your account isn't allowed to use this model. Pick another with /model. (${err.message})`;
+  else if (err instanceof Anthropic.NotFoundError) message = `That model isn't available to your account. Pick another with /model.`;
+  else if (err instanceof Anthropic.RateLimitError) message = 'Rate limited by the Claude API — wait a moment and try again.';
+  else if (err instanceof Anthropic.APIConnectionError) message = "Couldn't reach the Claude API. Check your internet connection.";
+  else if (err instanceof Anthropic.BadRequestError && /credit balance/i.test(err.message)) {
+    code = 'billing';
+    message = 'You are signed in, but your Claude Console account has no API credits. Add credits at console.anthropic.com → Plans & Billing, then ask again — or type /model to switch to another provider or a local model. (API credits are separate from a Claude app subscription.)';
+  } else if (err instanceof Anthropic.APIError) message = `Claude API error ${err.status ?? ''}: ${err.message}`;
+  return { code, message };
 }

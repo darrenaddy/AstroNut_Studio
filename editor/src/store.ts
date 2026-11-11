@@ -35,7 +35,7 @@ export const BREAKPOINTS = [
 ];
 
 type Toast = { id: number; text: string; kind: 'info' | 'error' | 'ok' };
-type ChatItem = { role: 'user' | 'assistant'; text: string; thinking?: string; tools?: any[]; error?: string; code?: string; changed?: string[]; pending?: boolean; stopped?: boolean };
+type ChatItem = { role: 'user' | 'assistant'; text: string; thinking?: string; tools?: any[]; error?: string; code?: string; changed?: string[]; pending?: boolean; stopped?: boolean; models?: any[]; providers?: any[]; current?: any };
 
 const saved = (k: string, d: any) => {
   try {
@@ -87,6 +87,8 @@ interface State {
   welcomeOpen: boolean;
   codeFile: string | null;
   entryFile: string | null;
+  widgetOpen: boolean;
+  inventoryOpen: boolean;
   inspectorTab: 'design' | 'classes' | 'source';
   menu: { x: number; y: number } | null;
   dialog: any | null;
@@ -105,6 +107,7 @@ const cmd = (type: string, data: any = {}) => iframe?.contentWindow?.postMessage
 
 let opChain: Promise<any> = Promise.resolve();
 let readyCount = 0;
+let pendingField: any = null;
 let retries = 0;
 /** Astro normally hot-reloads the preview after a file changes. If it hasn't within a moment, do it ourselves. */
 function ensureFresh(delay = 1300) {
@@ -371,8 +374,17 @@ export const useStore = create<State>((set, get) => {
           api
             .post('/node', { file, ref: { loc: m.el.loc } })
             .then((info) => {
-              if (info.textEditable) cmd('edit-text', { key: { file: m.el.file, loc: m.el.loc, index: m.el.index } });
-              else if (info.inExpr) actions.toast('This text comes from data (a loop or a variable), so it can’t be typed over here. Edit it in the Source tab or in the Content tab.');
+              const key = { file: m.el.file, loc: m.el.loc, index: m.el.index };
+              if (info.textEditable) cmd('edit-text', { key });
+              else if (info.field) {
+                // Text that comes from a widget field: type on the canvas, save to this placement.
+                pendingField = { key, field: info.field, component: file, runIndex: m.el.runIndex || 0, text: m.el.text };
+                cmd('edit-text', { key });
+              } else if (info.listItem) {
+                // Text of one item in a list field.
+                pendingField = { key, field: info.listItem.field, itemKey: info.listItem.key, itemIndex: m.el.itemIndex || 0, component: file, runIndex: m.el.runIndex || 0 };
+                cmd('edit-text', { key });
+              } else if (info.inExpr) actions.toast('This text comes from data (a loop or a variable), so it can’t be typed over here. Edit it in the Source tab or in the Content tab.');
               else actions.toast('This element contains other elements. Double-click the text itself, or use the Source tab.');
             })
             .catch(actions.fail);
@@ -383,7 +395,10 @@ export const useStore = create<State>((set, get) => {
           break;
         case 'text-commit': {
           const file = rel(m.key.file);
-          if (file) actions.rawOp({ type: 'setText', file, target: { loc: m.key.loc }, text: m.text }, m.key.index);
+          const pf = pendingField;
+          pendingField = null;
+          if (pf && pf.key.file === m.key.file && pf.key.loc === m.key.loc) actions.commitFieldText(pf, m.text);
+          else if (file) actions.rawOp({ type: 'setText', file, target: { loc: m.key.loc }, text: m.text }, m.key.index);
           break;
         }
         case 'contextmenu': {
@@ -517,13 +532,81 @@ export const useStore = create<State>((set, get) => {
       return actions.rawOp({ type: 'insert', file: pageFile, pageLevel: true, html });
     },
     /** Add a component block to the current page (via drag-drop ref, selection, or at the end). */
-    insertBlock(data: { component: string; hasSlot?: boolean }, dropRef?: any) {
+    // ---- widgets ----------------------------------------------------------------
+    /** Set one field on the selected placement (null resets it to the widget's default). */
+    setField(name: string, value: any) {
+      return actions.op(() => ({ type: 'setField', name, value }));
+    },
+    /** Change a field's default inside the widget's own file. */
+    setDefault(file: string, name: string, value: any) {
+      return actions.rawOp({ type: 'setDefault', file, name, value });
+    },
+    /** Text typed on the canvas into a field: save it to that placement, or to the default when viewing the widget alone. */
+    async commitFieldText(pf: any, text: string) {
+      const { pageFile } = get();
+      const item = pf.itemKey ? { type: 'setItem', name: pf.field, index: pf.itemIndex, key: pf.itemKey, value: text } : null;
+      if (pageFile === pf.component) return item ? actions.rawOp({ ...item, file: pf.component }) : actions.setDefault(pf.component, pf.field, text);
+      try {
+        const ref = await api.post('/placement', { page: pageFile, component: pf.component, index: pf.runIndex, ...(item ? {} : { field: pf.field, text: pf.text }) });
+        const target = { start: ref.start, loc: ref.loc };
+        if (item) await actions.rawOp({ ...item, file: ref.file, target });
+        else await actions.rawOp({ type: 'setField', file: ref.file, target, name: pf.field, value: text });
+      } catch (e) {
+        actions.fail(e);
+        ensureFresh(0);
+      }
+    },
+    /** From an element inside a widget, select the placement it belongs to. */
+    async selectPlacement(open = false) {
+      const { selection: s, pageFile } = get();
+      if (!s || !pageFile) return;
+      try {
+        const ref = await api.post('/placement', { page: pageFile, component: s.file, index: s.el?.runIndex || 0 });
+        await actions.selectRef(ref.file, ref);
+        if (open) set({ widgetOpen: true });
+      } catch (e) {
+        actions.fail(e);
+      }
+    },
+    /** Give this page its own copy of the selected shared component. */
+    async detach() {
+      const r = await actions.op(() => ({ type: 'detach' }));
+      if (r?.copy) {
+        await actions.load();
+        actions.toast(`This page now has its own copy: ${r.copy.split('/').pop()}`, 'ok');
+      }
+    },
+    /** Turn the selected text / image / link into a field, after showing what will change. */
+    async toField(kind: string, name: string) {
+      const s = get().selection;
+      if (!s) return;
+      const o = { type: 'toField', file: s.file, target: { start: s.start, loc: s.loc }, kind, name };
+      const pre = await api.post('/op', { ...o, dryRun: true });
+      set({
+        dialog: {
+          type: 'confirm',
+          title: kind === 'list' ? `Make these items a list called “${name}”?` : `Make “${name}” a field?`,
+          preview: pre.preview,
+          usedOn: pre.usedOn,
+          text: kind === 'list' ? 'The first item becomes the pattern and each item’s text and images become the list. Every page looks the same afterwards; from then on each placement can add, remove and reorder items.' : 'Today’s content becomes the default, so every page looks exactly the same afterwards. From then on each placement can have its own value.',
+          confirm: 'Turn into a field',
+          onSubmit: async () => {
+            await actions.rawOp(o);
+            actions.deselect();
+            await actions.load();
+            actions.toast(`“${name}” is now a field`, 'ok');
+          },
+        },
+      });
+    },
+
+    insertBlock(data: { component: string; hasSlot?: boolean; copy?: boolean }, dropRef?: any) {
       const { pageFile, selection: s, data: d } = get();
       if (!pageFile) return;
       const isPage = d.pages.some((p: any) => p.file === pageFile);
       if (!isPage && !pageFile.startsWith('src/layouts/')) return actions.toast('Open a page first — blocks are added to pages.', 'info');
       if (data.component === pageFile) return actions.toast('A component can’t contain itself.', 'error');
-      const o: any = { type: 'insert', file: pageFile, component: data.component, withSlot: !!data.hasSlot, pageLevel: true };
+      const o: any = { type: 'insert', file: pageFile, component: data.component, withSlot: !!data.hasSlot, pageLevel: true, copy: !!data.copy };
       if (dropRef) o.dropRef = { ...dropRef, file: rel(dropRef.file) };
       else if (s && s.file === pageFile) o.target = { start: s.start, loc: s.loc };
       return actions.rawOp(o).then((r) => r && actions.toast(`Added ${data.component.split('/').pop()!.replace('.astro', '')} to the page`, 'ok'));
@@ -549,8 +632,38 @@ export const useStore = create<State>((set, get) => {
     },
 
     // ---- assistant -----------------------------------------------------------
+    /** `/model` lists every available model; `/model <words>` switches to the one that matches. */
+    async modelCommand(arg: string) {
+      const say = (item: Partial<ChatItem>) => set((x) => ({ chat: [...x.chat, { role: 'assistant', text: '', ...item } as ChatItem] }));
+      set((x) => ({ chatOpen: true, chat: [...x.chat, { role: 'user', text: ('/model ' + arg).trim() }] }));
+      let list: any;
+      try {
+        list = await api.get('/ai/models?refresh=1');
+      } catch (e: any) {
+        return say({ error: e.message });
+      }
+      const words = arg.toLowerCase().split(/\s+/).filter(Boolean);
+      if (!words.length) return say({ text: 'Pick a model. The conversation carries over when you switch.', ...list });
+      const hay = (m: any) => `${m.provider} ${m.id} ${m.label}`.toLowerCase();
+      const exact = list.models.filter((m: any) => m.id.toLowerCase() === arg.toLowerCase() || m.label.toLowerCase() === arg.toLowerCase());
+      const matches = exact.length ? exact : list.models.filter((m: any) => words.every((w) => hay(m).includes(w)));
+      if (matches.length === 1) return actions.setModel(matches[0]);
+      if (!matches.length) return say({ text: `No model matches “${arg}”. Here is everything available:`, ...list });
+      say({ text: `“${arg}” matches several models — pick one:`, ...list, models: matches });
+    },
+    async setModel(m: { provider: string; id: string; label?: string }) {
+      try {
+        const ai = await api.put('/settings', { model: { provider: m.provider, id: m.id } });
+        set((x) => ({ ai, chat: [...x.chat, { role: 'assistant', text: `Now using ${ai.modelLabel} · ${ai.providerLabel}.${ai.hasKey ? '' : ' This provider still needs setting up — open Settings.'}` } as ChatItem] }));
+      } catch (e) {
+        actions.fail(e);
+      }
+    },
+
     async ask(prompt: string) {
       if (get().chatBusy || !prompt.trim()) return;
+      const slash = /^\/models?\b\s*(.*)$/i.exec(prompt.trim());
+      if (slash) return actions.modelCommand(slash[1].trim());
       const st = get();
       const s = st.selection;
       const context = {
@@ -655,6 +768,8 @@ export const useStore = create<State>((set, get) => {
     welcomeOpen: !saved('welcomed', false),
     codeFile: null,
     entryFile: null,
+    widgetOpen: false,
+    inventoryOpen: false,
     inspectorTab: 'design',
     menu: null,
     dialog: null,

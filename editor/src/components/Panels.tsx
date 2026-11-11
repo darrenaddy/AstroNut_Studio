@@ -71,7 +71,11 @@ export function Chat() {
             {ai && !ai.hasKey && !ai.mock && (
               <div className="msg">
                 <div className="err" style={{ display: 'grid', gap: 8 }}>
-                  <span>The assistant isn’t signed in yet. Run <code>ant auth login</code> in a terminal, or add an Anthropic API key.</span>
+                  {ai.provider === 'anthropic' ? (
+                    <span>The assistant isn’t signed in yet. Run <code>ant auth login</code> in a terminal, add an Anthropic API key, or type <code>/model</code> to use another provider or a local model.</span>
+                  ) : (
+                    <span>{ai.providerLabel} isn’t set up yet. Add its details in Settings, or type <code>/model</code> to pick something else.</span>
+                  )}
                   <button className="btn sm primary" style={{ justifySelf: 'start' }} onClick={() => useStore.setState({ settingsOpen: true })}>
                     <KeyRound size={13} /> Set it up
                   </button>
@@ -109,6 +113,7 @@ export function Chat() {
                 </div>
               )}
               {m.text}
+              {m.models && <ModelList item={m} busy={busy} />}
               {m.pending && !m.text && (
                 <span className="typing">
                   <i />
@@ -119,6 +124,13 @@ export function Chat() {
               {m.error && (
                 <div className="err">
                   {m.error}
+                  {(m.code === 'billing' || m.code === 'limit' || m.code === 'eligible' || m.code === 'tools' || m.code === 'model') && i === chat.length - 1 && (
+                    <div style={{ marginTop: 8 }}>
+                      <button className="btn sm primary" onClick={() => act().ask('/model')}>
+                        Switch model
+                      </button>
+                    </div>
+                  )}
                   {m.code === 'auth' && (
                     <div style={{ marginTop: 8 }}>
                       <button className="btn sm primary" onClick={() => useStore.setState({ settingsOpen: true })}>
@@ -173,7 +185,9 @@ export function Chat() {
             </span>
           )}
           <span style={{ flex: 1 }} />
-          <span className="sub">{ai?.mock ? 'mock' : ai?.models?.find((m: any) => m.id === ai.model)?.label.replace('Claude ', '')}</span>
+          <button className="ctx" style={{ cursor: 'pointer', maxWidth: 150 }} title={`${ai?.providerLabel || ''} — click to switch model (or type /model)`} onClick={() => act().ask('/model')} disabled={busy}>
+            {ai?.mock ? 'mock' : (ai?.modelLabel || '').replace('Claude ', '')}
+          </button>
           {busy ? (
             <button className="btn sm dark" onClick={() => act().stopAsk()}>
               <Square size={11} fill="currentColor" /> Stop
@@ -185,6 +199,173 @@ export function Chat() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ModelList({ item, busy }: { item: any; busy: boolean }) {
+  const ai = useStore((s) => s.ai);
+  const groups = (item.providers || []).map((p: any) => ({ ...p, models: item.models.filter((m: any) => m.provider === p.id) }));
+  return (
+    <div className="modellist">
+      {groups.map((g: any) =>
+        g.models.length ? (
+          <div key={g.id}>
+            <div className="lbl">{g.label}</div>
+            {g.models.map((m: any) => {
+              const on = ai?.provider === m.provider && ai?.model === m.id;
+              return (
+                <button key={m.id} className={'modelrow' + (on ? ' on' : '')} disabled={busy} onClick={() => act().setModel(m)} title={`/model ${m.provider} ${m.id}`}>
+                  <span>{m.label}</span>
+                  {on ? <Check size={13} /> : m.provider === 'anthropic' ? <span className="sub">{m.note}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : g.status !== 'ready' && item.models.length === (item.models || []).length && !item.text?.includes('matches several') ? (
+          <div key={g.id} className="sub" style={{ padding: '2px 0' }}>
+            {g.label} — {g.status}
+          </div>
+        ) : null,
+      )}
+      <button className="btn sm ghost" style={{ justifySelf: 'start', marginTop: 4 }} onClick={() => useStore.setState({ settingsOpen: true })}>
+        Set up providers…
+      </button>
+    </div>
+  );
+}
+
+/** Connection details for every non-Claude provider. */
+function Providers({ list, onSaved }: { list: any; onSaved: () => void }) {
+  const save = async (id: string, patch: any) => {
+    try {
+      await api.put('/settings', { providers: { [id]: patch } });
+      onSaved();
+    } catch (e) {
+      act().fail(e);
+    }
+  };
+  const rows = (list?.providers || []).filter((p: any) => p.id !== 'anthropic' && !p.signIn);
+  const gpt = (list?.providers || []).find((p: any) => p.signIn);
+  return (
+    <div className="field">
+      <label>Other providers and local models</label>
+      <div className="providers">
+        {gpt && <ChatGPTRow p={gpt} onChanged={onSaved} />}
+        {rows.map((p: any) => (
+          <div className="provider" key={p.id}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className={'status-dot ' + (p.status === 'ready' ? 'running' : p.status === 'not set up' || p.status === 'not running' ? '' : 'error')} />
+              <b style={{ flex: 1 }}>{p.label}</b>
+              <span className="sub">{p.status === 'ready' ? `${p.count} model${p.count === 1 ? '' : 's'}` : p.status}</span>
+            </div>
+            {(p.local || p.id === 'custom') && <LazyInput label="Address" value={p.baseUrl} placeholder="http://localhost:8080/v1" onCommit={(v) => save(p.id, { baseUrl: v })} />}
+            {!p.local && <LazyInput label="API key" secret value="" placeholder={p.keyHint ? `Saved (${p.keyHint}) — type to replace` : p.id === 'custom' ? 'Optional' : 'Paste a key to enable'} onCommit={(v) => v && save(p.id, { apiKey: v })} />}
+            {!p.local && p.keyHint && p.keyHint !== 'from environment' && (
+              <button className="sub" style={{ textDecoration: 'underline', justifySelf: 'start' }} onClick={() => save(p.id, { apiKey: '' })}>
+                remove key
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="sub" style={{ margin: 0, lineHeight: 1.5 }}>
+        Local models run entirely on this Mac: install Ollama or LM Studio, download a model that supports tool use (for example <code>qwen3</code> or <code>qwen2.5-coder</code>), and it appears here. Any other service that speaks the OpenAI-compatible API works through “Custom endpoint”. Keys are stored only in <code>.astrolabe/settings.json</code> on this computer.
+      </p>
+    </div>
+  );
+}
+
+/** "Sign in with ChatGPT": bills the assistant to the person's ChatGPT plan. */
+function ChatGPTRow({ p, onChanged }: { p: any; onChanged: () => void }) {
+  const [waiting, setWaiting] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!waiting) return;
+    const t = setInterval(async () => {
+      const st = await api.get('/ai/chatgpt').catch(() => null);
+      if (!st || st.pending) return;
+      setWaiting(false);
+      setError(st.signedIn ? '' : st.error || '');
+      // You just signed in, so start using it: switch the assistant to the first ChatGPT model.
+      if (st.sharing && useStore.getState().ai?.provider !== 'chatgpt') {
+        try {
+          const list = await api.get('/ai/models?refresh=1');
+          const first = list.models.find((m: any) => m.provider === 'chatgpt');
+          if (first) {
+            const ai = await api.put('/settings', { model: { provider: first.provider, id: first.id } });
+            useStore.setState({ ai });
+            act().toast(`Signed in — the assistant now uses ${first.label}`, 'ok');
+          }
+        } catch {}
+      }
+      onChanged();
+    }, 1200);
+    return () => clearInterval(t);
+  }, [waiting]);
+  const signIn = async () => {
+    setError('');
+    // Open the tab first (inside the click) so the browser doesn't block it.
+    const tab = window.open('about:blank', '_blank');
+    try {
+      const { url } = await api.post('/ai/chatgpt/signin');
+      if (tab) tab.location.href = url;
+      else window.location.assign(url);
+      setWaiting(true);
+    } catch (e: any) {
+      tab?.close();
+      setError(e.message);
+    }
+  };
+  return (
+    <div className="provider">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span className={'status-dot ' + (p.status === 'ready' ? 'running' : p.signedIn ? 'error' : '')} />
+        <b style={{ flex: 1 }}>ChatGPT plan</b>
+        <span className="sub">{waiting ? 'waiting for the browser…' : p.status === 'ready' ? `${p.email || 'signed in'} · ${p.count} model${p.count === 1 ? '' : 's'}` : p.status}</span>
+      </div>
+      <div className="actions">
+        {p.signedIn ? (
+          <>
+            {!p.sharing && (
+              <button className="btn sm primary" onClick={signIn}>
+                Sign in again
+              </button>
+            )}
+            <button
+              className="btn sm"
+              onClick={async () => {
+                const r = await api.post('/ai/chatgpt/signout').catch(() => null);
+                if (r && !r.revoked) act().toast('Signed out here. OpenAI didn’t confirm it — you can also disconnect Astrolabe in ChatGPT settings.');
+                onChanged();
+              }}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <button className="btn sm primary" onClick={signIn} disabled={waiting}>
+            Sign in with ChatGPT
+          </button>
+        )}
+      </div>
+      {error && <span style={{ color: 'var(--err)', fontSize: 11.5 }}>{error}</span>}
+      <span className="sub" style={{ lineHeight: 1.45 }}>Uses your ChatGPT Plus or Pro plan’s allowance — no API key. Opens a browser tab to sign in.</span>
+    </div>
+  );
+}
+
+function LazyInput({ label, value, placeholder, onCommit, secret }: { label: string; value: string; placeholder?: string; onCommit: (v: string) => void; secret?: boolean }) {
+  const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]);
+  const commit = () => {
+    if (v.trim() !== value) onCommit(v.trim());
+    if (secret) setV('');
+  };
+  return (
+    <div className="inp">
+      <span className="pre">{label}</span>
+      <input type={secret ? 'password' : 'text'} autoComplete="off" spellCheck={false} value={v} placeholder={placeholder} style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
     </div>
   );
 }
@@ -235,6 +416,12 @@ export function Settings() {
   const uiTheme = useStore((s) => s.uiTheme);
   const project = useStore((s) => s.data?.project);
   const [key, setKey] = useState('');
+  const [list, setList] = useState<any>(null);
+  const refresh = () => {
+    api.get('/ai/models?refresh=1').then(setList).catch(() => setList({ stale: true, models: [], providers: [] }));
+    api.get('/settings').then((next) => useStore.setState({ ai: next })).catch(() => {});
+  };
+  useEffect(refresh, []);
   const save = async (patch: any) => {
     try {
       const next = await api.put('/settings', patch);
@@ -245,11 +432,11 @@ export function Settings() {
     }
   };
   return (
-    <Modal title="Settings" onClose={() => useStore.setState({ settingsOpen: false })} footer={<button className="btn primary" onClick={() => useStore.setState({ settingsOpen: false })}>Done</button>}>
+    <Modal title="Settings" className="settings" onClose={() => useStore.setState({ settingsOpen: false })} footer={<button className="btn primary" onClick={() => useStore.setState({ settingsOpen: false })}>Done</button>}>
       <div className="modal-body">
         <div className="field">
-          <label>AI assistant — sign-in</label>
-          {ai?.hasKey ? (
+          <label>Claude — sign-in</label>
+          {ai?.keySource ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span className="inp set" style={{ flex: 1, color: 'var(--fg2)' }}>
                 <Check size={13} style={{ color: 'var(--ok)' }} />
@@ -280,15 +467,30 @@ export function Settings() {
           <div className="field">
             <label>Model</label>
             <div className="inp">
-              <select value={ai?.model} onChange={(e) => save({ model: e.target.value })}>
-                {ai?.models?.map((m: any) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
+              <select
+                value={`${ai?.provider}\n${ai?.model}`}
+                onChange={(e) => {
+                  const [provider, id] = e.target.value.split('\n');
+                  save({ model: { provider, id } });
+                }}
+              >
+                {!list && <option value={`${ai?.provider}\n${ai?.model}`}>{ai?.modelLabel}</option>}
+                {list && !list.models.some((m: any) => m.provider === ai?.provider && m.id === ai?.model) && <option value={`${ai?.provider}\n${ai?.model}`}>{ai?.modelLabel} (unavailable)</option>}
+                {(list?.providers || []).map((p: any) => {
+                  const ms = list.models.filter((m: any) => m.provider === p.id);
+                  return ms.length ? (
+                    <optgroup key={p.id} label={p.label}>
+                      {ms.map((m: any) => (
+                        <option key={m.id} value={`${m.provider}\n${m.id}`}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null;
+                })}
               </select>
             </div>
-            <span className="sub">{ai?.models?.find((m: any) => m.id === ai.model)?.note}</span>
+            <span className="sub">{ai?.providerLabel} · or type /model in the chat</span>
           </div>
           <div className="field">
             <label>Thinking effort</label>
@@ -301,6 +503,14 @@ export function Settings() {
             </div>
           </div>
         </div>
+        {list?.stale && (
+          <div className="msg">
+            <div className="err">
+              The editor needs a restart to show providers and models: it was updated while running. In the terminal where it runs, press Ctrl+C, then run <code>npm start</code> again and reload this page.
+            </div>
+          </div>
+        )}
+        <Providers list={list} onSaved={refresh} />
         <div className="field">
           <label>Editor appearance</label>
           <Seg value={uiTheme} onChange={(v) => v && act().setUiTheme(v)} options={[{ value: 'system', label: 'Match system' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
@@ -422,6 +632,30 @@ export function Dialog() {
     >
       <div className="modal-body">
         {d.text && <p>{d.text}</p>}
+        {d.preview && (d.preview.removed.length > 0 || d.preview.added.length > 0) && (
+          <div className="diff">
+            {d.preview.removed.map((l: string, i: number) => (
+              <div key={'r' + i} className="del">
+                − {l.trim()}
+              </div>
+            ))}
+            {d.preview.added.map((l: string, i: number) => (
+              <div key={'a' + i} className="add">
+                + {l.trim()}
+              </div>
+            ))}
+          </div>
+        )}
+        {d.usedOn?.length > 0 && (
+          <p className="sub" style={{ lineHeight: 1.6 }}>
+            Used on:{' '}
+            {d.usedOn.map((u: any) => (
+              <span key={u.file} className="pagechip" style={{ marginRight: 4 }}>
+                {u.route}
+              </span>
+            ))}
+          </p>
+        )}
         {d.type === 'prompt' && (
           <div className="field">
             <label>{d.label}</label>
