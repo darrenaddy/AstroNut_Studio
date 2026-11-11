@@ -1,29 +1,76 @@
 ---
-// Footer 2 — minimal single row: wordmark, inline links, copyright.
+// Footer 2 — bold dark footer: newsletter sign-up, link columns and an oversized wordmark.
 ---
 
-<footer class="border-t border-line bg-bg py-10">
-  <div class="mx-auto max-w-6xl px-6">
-    <div class="flex flex-col items-center gap-6 lg:flex-row lg:justify-between">
-      <a href="/" class="inline-flex items-center gap-2.5">
-        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-600 text-white">
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 9c3-3 6-3 9 0s6 3 9 0"></path>
-            <path d="M3 15c3-3 6-3 9 0s6 3 9 0"></path>
-          </svg>
-        </span>
-        <span class="font-display text-lg font-semibold tracking-tight text-fg">Halcyon</span>
-      </a>
+<footer class="relative overflow-hidden bg-brand-950 text-white">
+  <div class="mx-auto max-w-6xl px-6 pt-20 sm:pt-24">
+    <div class="grid gap-12 border-b border-white/10 pb-16 lg:grid-cols-2 lg:items-end lg:gap-20">
+      <div>
+        <p class="text-sm font-semibold uppercase tracking-widest text-brand-300">Stay in the loop</p>
+        <h2 class="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl">A calmer week starts with one email.</h2>
+        <p class="mt-5 max-w-md text-lg leading-relaxed text-white/70">The Calm Dispatch arrives once a month with one idea for working with less noise. No tracking, no tricks.</p>
+      </div>
+      <form action="#" method="post" class="w-full">
+        <label for="footer2-email" class="text-sm font-medium text-white/80">Work email</label>
+        <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+          <input id="footer2-email" name="email" type="email" required placeholder="you@company.com" class="w-full flex-1 rounded-button border border-white/15 bg-white/10 px-5 py-3.5 text-white placeholder:text-white/40 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          <button type="submit" class="rounded-button bg-white px-7 py-3.5 font-semibold text-brand-950 transition hover:bg-brand-100">Subscribe</button>
+        </div>
+        <p class="mt-3 text-sm text-white/50">Read by 18,000 team leads. Unsubscribe in one click.</p>
+      </form>
+    </div>
 
-      <nav aria-label="Footer" class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
-        <a href="/pricing" class="text-muted transition hover:text-fg">Pricing</a>
-        <a href="/about" class="text-muted transition hover:text-fg">About</a>
-        <a href="/blog" class="text-muted transition hover:text-fg">Blog</a>
-        <a href="/contact" class="text-muted transition hover:text-fg">Contact</a>
-        <a href="#" class="text-muted transition hover:text-fg">Privacy</a>
+    <div class="grid grid-cols-2 gap-10 py-16 md:grid-cols-4">
+      <div>
+        <h3 class="text-sm font-semibold text-white">Product</h3>
+        <ul class="mt-5 space-y-3 text-sm">
+          <li><a href="/#features" class="text-white/60 transition hover:text-white">Features</a></li>
+          <li><a href="/pricing" class="text-white/60 transition hover:text-white">Pricing</a></li>
+          <li><a href="#" class="text-white/60 transition hover:text-white">Integrations</a></li>
+          <li><a href="#" class="text-white/60 transition hover:text-white">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-white">Company</h3>
+        <ul class="mt-5 space-y-3 text-sm">
+          <li><a href="/about" class="text-white/60 transition hover:text-white">About</a></li>
+          <li><a href="/blog" class="text-white/60 transition hover:text-white">Blog</a></li>
+          <li><a href="#" class="text-white/60 transition hover:text-white">Careers</a></li>
+          <li><a href="/contact" class="text-white/60 transition hover:text-white">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-white">Resources</h3>
+        <ul class="mt-5 space-y-3 text-sm">
+          <li><a href="#" class="text-white/60 transition hover:text-white">Help centre</a></li>
+          <li><a href="#" class="text-white/60 transition hover:text-white">Templates</a></li>
+          <li><a href="#" class="text-white/60 transition hover:text-white">API docs</a></li>
+          <li><a href="#" class="text-white/60 transition hover:text-white">System status</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-white">Say hello</h3>
+        <ul class="mt-5 space-y-3 text-sm">
+          <li><a href="mailto:hello@halcyon.app" class="text-white/60 transition hover:text-white">hello@halcyon.app</a></li>
+          <li><span class="text-white/60">14 Lantern Yard, London</span></li>
+          <li><span class="text-white/60">Mon–Fri, 9am–5pm GMT</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="pointer-events-none select-none px-6" aria-hidden="true">
+    <p class="bg-linear-to-b from-white/15 to-white/0 bg-clip-text text-center font-display text-[22vw] font-semibold leading-none tracking-tighter text-transparent lg:text-[17rem]">Halcyon</p>
+  </div>
+
+  <div class="relative border-t border-white/10">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-6 text-sm sm:flex-row">
+      <p class="text-white/50">© 2026 Halcyon Labs, Inc. All rights reserved.</p>
+      <nav aria-label="Legal" class="flex items-center gap-6">
+        <a href="#" class="text-white/50 transition hover:text-white">Privacy</a>
+        <a href="#" class="text-white/50 transition hover:text-white">Terms</a>
+        <a href="#" class="text-white/50 transition hover:text-white">Cookies</a>
       </nav>
-
-      <p class="text-sm text-muted">© 2026 Halcyon Labs, Inc.</p>
     </div>
   </div>
 </footer>
