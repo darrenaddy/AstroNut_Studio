@@ -14,17 +14,17 @@
   --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
 
-  --color-brand-50: #f3f1ff;
-  --color-brand-100: #e9e5ff;
-  --color-brand-200: #d5cdff;
-  --color-brand-300: #b7a6ff;
-  --color-brand-400: #9375ff;
-  --color-brand-500: #7445ff;
-  --color-brand-600: #6425f5;
-  --color-brand-700: #5517db;
-  --color-brand-800: #4715b3;
-  --color-brand-900: #3c1592;
-  --color-brand-950: #240a63;
+  --color-brand-50: #fef8f0;
+  --color-brand-100: #fef1e1;
+  --color-brand-200: #ffe0bd;
+  --color-brand-300: #fccb92;
+  --color-brand-400: #fbb360;
+  --color-brand-500: #f99b2f;
+  --color-brand-600: #f68809;
+  --color-brand-700: #cb720b;
+  --color-brand-800: #a15c0d;
+  --color-brand-900: #7c490d;
+  --color-brand-950: #4a2b08;
 
   --radius-card: 1.25rem;
   --radius-button: 9999px;
