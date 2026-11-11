@@ -398,7 +398,12 @@ export class Lighthouse {
       const desktopConfig = device === 'desktop' ? (await import('lighthouse/core/config/desktop-config.js')).default : undefined;
       server = await serveDist(dist);
       try {
-        chrome = await launcher.launch({ chromeFlags: ['--headless=new', '--no-first-run', '--disable-extensions'] });
+        // Run Chrome quietly: no self-update, background fetching or first-run tasks. Without these it can
+        // try to update its own app, which macOS blocks and reports as an attempt to modify apps.
+        chrome = await launcher.launch({
+          chromeFlags: ['--headless=new', '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-component-update', '--disable-background-networking', '--disable-sync', '--disable-default-apps', '--disable-features=OptimizationHints,MediaRouter'],
+          envVars: { ...process.env, GOOGLE_UPDATER_DISABLED: '1' },
+        });
       } catch {
         throw new Error('Lighthouse needs Google Chrome (or another Chromium browser) installed on this computer.');
       }
