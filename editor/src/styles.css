@@ -436,3 +436,15 @@ button.pagechip:hover { background: var(--active); color: var(--fg); }
 .choices button { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); text-align: left; font-weight: 500; }
 .choices button:hover { background: var(--hover); }
 .choices button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+/* Tooltips in the side panels open inwards, so the neighbouring pane can't clip them. */
+.left .tip::after { left: auto; right: 0; transform: translateY(4px); }
+.left .tip:hover::after { transform: none; }
+.left .tabs .tip::after { left: 0; right: auto; }
+.right .tip::after { left: auto; right: 0; transform: translateY(4px); }
+.right .tip:hover::after { transform: none; }
+
+/* A dropdown's arrow is decoration: let clicks on it reach the dropdown underneath. */
+.inp:has(> select) { position: relative; padding-right: 0; }
+.inp > select { padding-right: 24px; align-self: stretch; }
+.inp > select + svg { position: absolute; right: 7px; top: 50%; margin-top: -6px; pointer-events: none; }
