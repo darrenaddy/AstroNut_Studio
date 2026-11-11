@@ -460,6 +460,21 @@
         extHoverEls = m.key ? (m.key.component ? componentRuns(m.key.file)[m.key.index || 0] || null : [find(m.key)].filter(Boolean)) : null;
         if (extHoverEls && !extHoverEls.length) extHoverEls = null;
         break;
+      case 'select-css': {
+        // Used by site checks to show the element a finding is about.
+        let el = null;
+        try {
+          el = document.querySelector(m.selector);
+        } catch {}
+        let target = el && pick(el);
+        while (target && isOpaque(target)) target = hostOf(target);
+        if (target) {
+          setSelected([el], keyOf(target), m.label || labelFor(target), false);
+          el.scrollIntoView({ block: 'center' });
+          post('select', { el: describe(target) });
+        } else post('css-missing', {});
+        break;
+      }
       case 'config':
         cfg = { root: m.root || '', opaque: m.opaque || [] };
         break;

@@ -60,6 +60,16 @@ Click an optimised image to set its description, how it sizes itself (constraine
 
 Blog post images work the same way: choose a photo for a post's hero image in the Content tab and it is optimised wherever the post is shown.
 
+### Site checks
+
+The **Check** button above the page opens three checks:
+
+- **Images · while editing** — images with no description, photos served at full size from `public/`, oversized originals, files nothing uses, a photo that would be missing once built, and pages with more than one load-first image. Most have a one-click fix, and each can be shown on the page.
+- **Images · built site** — builds the site and measures the real output: missing image files, large images that escaped optimisation, and what each page's images weigh on a phone and on a laptop.
+- **Lighthouse** — runs Google's Lighthouse against the built site in headless Chrome and scores each page for performance, accessibility, best practices and SEO, on a simulated phone or a desktop. Open a page to see what is costing points; findings that point at an element can be shown on the canvas. Scores from the previous run are kept so you can see the change.
+
+Lighthouse needs Google Chrome (or another Chromium browser) installed. It measures the built site served from your own computer; once the site is live, PageSpeed Insights runs the same test on the real address.
+
 ### Forms
 
 The form icon next to Components opens the **form builder**: name the form, pick a starting point (contact, newsletter, sign-up, feedback, quote request or blank), and it is saved under Forms as its own widget. Build it in the right panel — add, remove and reorder fields; each field has a label, a type (text, email, phone, number, date, long text, dropdown, choice, checkbox, file), a placeholder, required on/off, and half-width on/off.

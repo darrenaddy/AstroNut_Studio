@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { Project, httpError, FORM_PRESETS } from './project.mjs';
 import { DevServer } from './dev.mjs';
 import { Fonts } from './fonts.mjs';
+import { imageCheck, fixImage, builtImageCheck, Lighthouse } from './checks.mjs';
 import { Assistant, chatgpt, invalidateModels, listModels, publicSettings, saveProviders, saveSettings, setModel } from './ai.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -122,6 +123,19 @@ api.put('/fonts', wrap(async (req) => {
   await dev.restart();
   return { ...out, ...fonts.state() };
 }));
+
+// ---- checks: images while editing, images after building, Lighthouse ---------------
+const lighthouse = new Lighthouse(project, process.env.ASTROPHILE_HOME || path.join(here, '..', '.astrophile'), broadcast);
+api.get('/checks/images', wrap(() => imageCheck(project)));
+api.post('/checks/fix', wrap((req) => fixImage(project, req.body)));
+api.get('/checks/built', wrap(() => builtImageCheck(project)));
+api.post('/checks/build', wrap(async () => {
+  const build = await dev.build();
+  return { build, ...(build.ok ? builtImageCheck(project) : { built: false }) };
+}));
+api.get('/checks/lighthouse', wrap(() => ({ last: lighthouse.last(), pages: lighthouse.pages(), running: lighthouse.running })));
+api.post('/checks/lighthouse', wrap((req) => lighthouse.run({ routes: req.body.routes, device: req.body.device })));
+api.post('/checks/lighthouse/stop', wrap(() => lighthouse.stop()));
 
 // ---- theme tokens ----------------------------------------------------------
 api.put('/theme', wrap((req) => project.transaction('Change theme', () => project.setTheme(req.body.scope, req.body.vars))));

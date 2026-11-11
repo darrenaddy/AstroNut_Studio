@@ -463,3 +463,36 @@ button.pagechip:hover { background: var(--active); color: var(--fg); }
 .fontopt .sample { font-size: 24px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity .2s; }
 
 .media-item .opt { position: absolute; left: 3px; bottom: 3px; width: 15px; height: 15px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 10px; line-height: 15px; text-align: center; font-weight: 700; }
+
+/* ---------- site checks ---------- */
+.modal.checks { width: min(1000px, 100%); height: min(780px, 100%); }
+.checkbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.finding { display: flex; gap: 12px; align-items: flex-start; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.finding .lvl { flex: none; margin-top: 2px; }
+.finding.error .lvl { color: var(--err); } .finding.warn .lvl { color: var(--dyn); } .finding.info .lvl { color: var(--muted); } .finding.ok .lvl { color: var(--ok); }
+.finding .ftext { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.finding .ftext span { color: var(--fg2); line-height: 1.45; font-size: 12.5px; }
+.finding .ftext .where { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.finding .facts { display: flex; gap: 6px; flex: none; }
+.fthumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); flex: none; background: var(--hover); }
+.lhpage { border-bottom: 1px solid var(--line); }
+.lhpage.stale { opacity: .6; }
+.lhrow { display: grid; grid-template-columns: minmax(0, 1fr) repeat(4, 104px); gap: 8px; align-items: center; width: 100%; padding: 10px 18px; text-align: left; }
+.lhrow:hover { background: var(--hover); }
+.lhrow .route { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lhrow .route i { font-family: "Inter Variable", sans-serif; font-style: normal; font-size: 10.5px; color: var(--muted); margin-left: 8px; }
+.score { position: relative; display: grid; justify-items: center; gap: 1px; padding: 5px 4px; border-radius: 9px; }
+.score b { font-size: 19px; line-height: 1.1; letter-spacing: -.02em; }
+.score span { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.score.good { background: color-mix(in srgb, var(--ok) 12%, transparent); } .score.good b { color: var(--ok); }
+.score.mid { background: color-mix(in srgb, var(--dyn) 14%, transparent); } .score.mid b { color: var(--dyn); }
+.score.bad { background: color-mix(in srgb, var(--err) 12%, transparent); } .score.bad b { color: var(--err); }
+.score i { position: absolute; top: 3px; right: 6px; font-style: normal; font-size: 10px; font-weight: 600; }
+.score i.up { color: var(--ok); } .score i.down { color: var(--err); }
+.lhbody { padding: 4px 18px 16px; display: grid; gap: 10px; }
+.lhfinding { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; line-height: 1.45; }
+.lhfinding > span { color: var(--fg2); font-size: 12.5px; }
+.lhfinding .cat { display: inline-block; font-size: 10px; font-weight: 600; padding: 0 6px; border-radius: 20px; background: var(--hover); color: var(--fg2); margin-right: 8px; line-height: 16px; vertical-align: 1px; }
+.lhfinding .nodes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.lhfinding .nodes button { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--hover); color: var(--fg2); max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lhfinding .nodes button:hover { background: var(--accent-soft); color: var(--accent); }

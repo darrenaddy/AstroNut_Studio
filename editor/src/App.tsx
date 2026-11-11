@@ -8,6 +8,7 @@ import { Chat, CodeEditor, Dialog, Settings, Terminal, Welcome } from './compone
 import { ContentEditor } from './components/ContentEditor';
 import { Menu } from './components/ui';
 import { Inventory, WidgetEditor } from './components/Widgets';
+import { Checks } from './components/Checks';
 
 export default function App() {
   const tab = useStore((s) => s.tab);
@@ -18,6 +19,7 @@ export default function App() {
   const settingsOpen = useStore((s) => s.settingsOpen);
   const codeFile = useStore((s) => s.codeFile);
   const inventoryOpen = useStore((s) => s.inventoryOpen);
+  const checksOpen = useStore((s) => s.checksOpen);
   const widgetOpen = useStore((s) => s.widgetOpen);
   const dialog = useStore((s) => s.dialog);
   const welcomeOpen = useStore((s) => s.welcomeOpen);
@@ -132,6 +134,7 @@ export default function App() {
       )}
 
       {inventoryOpen && <Inventory />}
+      {checksOpen && <Checks />}
       {codeFile && <CodeEditor />}
       {settingsOpen && <Settings />}
       {dialog && <Dialog key={dialog.title} />}

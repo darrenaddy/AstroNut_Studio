@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Code2, ExternalLink, Hand, Heading, Image as ImageIcon, LayoutGrid, Link2, List, Minus, Monitor, Moon, MousePointer2, MousePointerClick, Plus, Redo2, RefreshCw, Rocket, Settings, Smartphone, Sparkles, Square, Sun, Tablet, TerminalSquare, Type, Undo2, Columns2, Columns3, RectangleHorizontal, PanelTop, X } from 'lucide-react';
+import { Gauge, Code2, ExternalLink, Hand, Heading, Image as ImageIcon, LayoutGrid, Link2, List, Minus, Monitor, Moon, MousePointer2, MousePointerClick, Plus, Redo2, RefreshCw, Rocket, Settings, Smartphone, Sparkles, Square, Sun, Tablet, TerminalSquare, Type, Undo2, Columns2, Columns3, RectangleHorizontal, PanelTop, X } from 'lucide-react';
 import { useStore, act, setIframe, BREAKPOINTS } from '../store';
 import { Dropdown, Seg } from './ui';
 
@@ -59,6 +59,9 @@ export function TopBar() {
         ]}
       />
       <div className="grow" />
+      <button className="btn sm ghost" onClick={() => useStore.setState({ checksOpen: true })} title="Image checks and Lighthouse scores">
+        <Gauge size={13} /> Check
+      </button>
       <button className="btn sm ghost" onClick={() => window.open((dev.url || '') + path, '_blank')} disabled={!dev.url}>
         <ExternalLink size={13} /> Open site
       </button>

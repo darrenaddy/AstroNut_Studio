@@ -96,6 +96,8 @@ interface State {
   codeFile: string | null;
   entryFile: string | null;
   widgetOpen: boolean;
+  checksOpen: boolean;
+  checksTab: string;
   inventoryOpen: boolean;
   inspectorTab: 'design' | 'classes' | 'source';
   menu: { x: number; y: number } | null;
@@ -291,6 +293,7 @@ export const useStore = create<State>((set, get) => {
         }
         else if (ev.type === 'history') set({ history: ev.history });
         else if (ev.type === 'fs') actions.scheduleLoad();
+        else if (ev.type === 'check') window.dispatchEvent(new CustomEvent('astrophile-check', { detail: ev }));
       };
       es.onerror = () => {};
       return () => es.close();
@@ -388,6 +391,9 @@ export const useStore = create<State>((set, get) => {
         }
         case 'deselect':
           set({ selection: null, menu: null });
+          break;
+        case 'css-missing':
+          actions.toast('That element isn’t on this page as it stands — it may have changed since the check ran.');
           break;
         case 'select-lost':
           if (st.selection) syncCanvasSelection();
@@ -803,6 +809,8 @@ export const useStore = create<State>((set, get) => {
     codeFile: null,
     entryFile: null,
     widgetOpen: false,
+    checksOpen: false,
+    checksTab: 'images',
     inventoryOpen: false,
     inspectorTab: 'design',
     menu: null,
