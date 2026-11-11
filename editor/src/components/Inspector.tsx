@@ -219,17 +219,8 @@ function ColorField({ value, onChange, placeholder }: { value: string; onChange:
                   timer.current = setTimeout(() => onChange(v), 220);
                 }}
               />
-              <div className="inp" style={{ flex: 1 }}>
-                <input
-                  placeholder="#hex or any colour name"
-                  value={custom}
-                  onChange={(e) => setCustom(e.target.value)}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter' && custom.trim()) pick(custom.trim());
-                  }}
-                />
-              </div>
+              <HexField value={tw.isHex(css || '') ? (css as string) : ''} width="auto" onCommit={(hex) => pick(hex)} />
+              <span style={{ flex: 1 }} />
               <button className="btn sm ghost" onClick={() => pick(null)}>
                 Clear
               </button>
@@ -242,6 +233,50 @@ function ColorField({ value, onChange, placeholder }: { value: string; onChange:
 }
 
 const opt = (list: (string | [string, string])[]) => list.map((x) => (Array.isArray(x) ? { value: x[0], label: x[1] } : { value: x, label: x }));
+/** A text box for typing or pasting a hex colour ("#1a2b3c", "1a2b3c" or "#abc"). */
+function HexField({ value, onCommit, width = 92 }: { value: string; onCommit: (hex: string) => void; width?: number | string }) {
+  const shown = tw.normalizeHex(value || '') || '';
+  const [v, setV] = useState(shown);
+  const [bad, setBad] = useState(false);
+  useEffect(() => {
+    setV(shown);
+    setBad(false);
+  }, [shown]);
+  const commit = () => {
+    if (!v.trim()) return setV(shown);
+    const hex = tw.normalizeHex(v);
+    if (!hex) return setBad(true);
+    setBad(false);
+    setV(hex);
+    if (hex !== shown) onCommit(hex);
+  };
+  return (
+    <div className="inp" style={{ width, flex: 'none', borderColor: bad ? 'var(--err)' : undefined }} title={bad ? 'Not a hex colour — use 3 or 6 digits, like #1a2b3c' : 'Type or paste a hex colour, then press Enter'}>
+      <input
+        value={v}
+        placeholder="#rrggbb"
+        spellCheck={false}
+        maxLength={9}
+        style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}
+        onChange={(e) => {
+          setV(e.target.value);
+          setBad(false);
+        }}
+        onFocus={(e) => e.target.select()}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') {
+            setV(shown);
+            setBad(false);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 
 const DesignCtx = createContext<{ g: (group: string) => string | null; setG: (group: string, value: string | null) => void; others: (group: string) => string[] }>(null as any);
 
@@ -987,15 +1022,20 @@ function PagePanel() {
                 ))}
                 <input type="color" title="Pick any colour" value={tw.isHex(brand500) ? brand500 : '#7445ff'} onChange={(e) => setBrand(e.target.value, true)} />
               </div>
-              <p className="sub" style={{ margin: 0 }}>Buttons, links and highlights all follow this colour.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="color" title="Pick any colour" value={tw.normalizeHex(brand500) || '#7445ff'} onChange={(e) => setBrand(e.target.value, true)} />
+                <span style={{ flex: 1 }}>Custom colour</span>
+                <HexField value={brand500} onCommit={(hex) => setBrand(hex)} />
+              </div>
+              <p className="sub" style={{ margin: 0 }}>Buttons, links and highlights follow this colour. Lighter and darker shades are generated from it.</p>
             </Group>
 
             <Group title={`Colours · ${scope} mode`} id="theme-sem">
               {SEM.map(([name, label, util]) => (
                 <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="color" value={tw.isHex(sem[name] || '') ? sem[name] : '#888888'} onChange={(e) => putTheme(scope, { [name]: e.target.value }, true)} />
-                  <span style={{ flex: 1 }}>{label}</span>
-                  <span className="sub" style={{ fontFamily: 'var(--mono)' }}>{util}</span>
+                  <input type="color" value={tw.normalizeHex(sem[name] || '') || '#888888'} onChange={(e) => putTheme(scope, { [name]: e.target.value }, true)} />
+                  <span style={{ flex: 1 }} title={`Used by the ${util} class`}>{label}</span>
+                  <HexField value={sem[name] || ''} onCommit={(hex) => putTheme(scope, { [name]: hex })} />
                 </div>
               ))}
               <p className="sub" style={{ margin: 0 }}>Switch the preview to {scope === 'dark' ? 'light' : 'dark'} mode (☀︎ / ☾ above the page) to edit the other set.</p>

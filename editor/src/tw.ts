@@ -236,15 +236,24 @@ function hslToHex(h: number, s: number, l: number) {
 
 export const SCALE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
-/** Build a full 50–950 scale around one colour (which becomes the 500–600 region). */
+/** "ff5d01", "#F50", " #FF5D01 " → "#ff5d01"; anything else → null. */
+export function normalizeHex(input: string): string | null {
+  let h = input.trim().replace(/^#/, '').toLowerCase();
+  if (/^[0-9a-f]{3}$/.test(h)) h = h.split('').map((c) => c + c).join('');
+  return /^[0-9a-f]{6}$/.test(h) ? '#' + h : null;
+}
+
+/** Build a full 50–950 scale around one colour. The colour you give is kept exactly as step 500. */
 export function makeScale(hex: string): Record<number, string> {
-  const [h, s] = hexToHsl(hex);
-  const L = [97, 94, 87, 78, 68, 58, 50, 42, 34, 27, 16];
-  const S = [0.9, 0.95, 1, 1, 1, 1, 0.98, 0.95, 0.9, 0.85, 0.85];
+  const exact = normalizeHex(hex) || '#7445ff';
+  const [h, s, l] = hexToHsl(exact);
+  const up = [1, 0.92, 0.78, 0.56, 0.3]; // 50 … 400: how far towards near-white
+  const down = [0.86, 0.72, 0.6, 0.48, 0.3]; // 600 … 950: fraction of the base lightness
   const out: Record<number, string> = {};
   SCALE_STEPS.forEach((step, i) => {
-    const sat = Math.min(100, Math.max(8, s * S[i] + (i < 3 ? 6 : 0)));
-    out[step] = hslToHex(h, sat, L[i]);
+    if (step === 500) out[step] = exact;
+    else if (step < 500) out[step] = hslToHex(h, Math.min(100, s * (i < 2 ? 0.9 : 1) + (i < 3 ? 6 : 0)), l + (97 - l) * up[i]);
+    else out[step] = hslToHex(h, s * (step >= 900 ? 0.85 : 0.95), l * down[i - 6]);
   });
   return out;
 }
