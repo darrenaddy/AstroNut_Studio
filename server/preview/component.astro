@@ -27,8 +27,11 @@ try {
   if (names.length) {
     const { getCollection } = await import('astro:content');
     for (const name of names) {
-      const first = (await getCollection(name))[0];
+      const all = await getCollection(name);
+      const first = all[0];
       if (!first) continue;
+      // A plural name (`posts`) is how a component asks for the whole list; the singular asks for one entry.
+      if (/s$/.test(name)) sample[name] ??= all;
       for (const prop of [name, name.replace(/s$/, ''), 'post', 'entry', 'item', 'article', 'doc']) sample[prop] ??= first;
     }
   }
