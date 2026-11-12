@@ -1025,7 +1025,10 @@ export class Project {
     if (raw) {
       const was = matter(raw);
       const head = raw.slice(0, raw.length - was.content.length);
-      if (/^---/.test(head) && JSON.stringify(tidy(normalizeData(was.data))) === JSON.stringify(clean)) out = text.trim() ? head.replace(/\n*$/, '\n\n') + text : head.replace(/\n*$/, '\n'); // an entry with no writing stays just its fields
+      const same = JSON.stringify(tidy(normalizeData(was.data))) === JSON.stringify(clean);
+      // Nothing was changed: leave the file alone, down to whether it ends with a line break.
+      if (same && was.content.replace(/^\n+/, '').trimEnd() === text.trimEnd()) return;
+      if (/^---/.test(head) && same) out = text.trim() ? head.replace(/\n*$/, '\n\n') + text : head.replace(/\n*$/, '\n'); // an entry with no writing stays just its fields
     }
     out ??= matter.stringify('\n' + text, clean, { lineWidth: -1 });
     if (out === raw) return;
