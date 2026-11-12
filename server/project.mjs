@@ -450,7 +450,8 @@ export class Project {
       if (node.type === 'component') {
         const target = imports[node.name.split('.')[0]];
         if (!target) return {};
-        const { fields } = W.parseFields(this.read(target));
+        const compSrc = this.read(target);
+        const fields = W.placementFields(node, W.parseFields(compSrc).fields, compSrc);
         return { fields, values: W.readValues(node, fields) };
       }
       if (node.type !== 'element') return {};
@@ -618,7 +619,8 @@ export class Project {
         // One field of one placement of a widget.
         const imports = this.componentMap(file, doc);
         const compFile = imports[target.name.split('.')[0]];
-        const field = compFile && W.parseFields(this.read(compFile)).fields.find((f) => f.name === o.name);
+        const compSrc = compFile ? this.read(compFile) : '';
+        const field = compFile && W.placementFields(target, W.parseFields(compSrc).fields, compSrc).find((f) => f.name === o.name);
         if (!field || field.type === 'code') throw httpError(400, `“${o.name}” isn’t an editable field of ${target.name}.`);
         res = { src: W.setFieldValue(src, target, field, o.value), at: target.start };
         this.smartenFor(compFile, field, o.value, extra);
@@ -628,7 +630,9 @@ export class Project {
       case 'setItem': {
         // One value of one item in a list field — on a placement, or (no target) in the widget's defaults.
         const compFile = target ? this.componentMap(file, doc)[target.name.split('.')[0]] : file;
-        const field = compFile && W.parseFields(this.read(compFile)).fields.find((f) => f.name === o.name && f.type === 'list');
+        const itemSrc = compFile ? this.read(compFile) : '';
+        const declared = compFile ? W.parseFields(itemSrc).fields : [];
+        const field = (target ? W.placementFields(target, declared, itemSrc) : declared).find((f) => f.name === o.name && f.type === 'list');
         if (!field) throw httpError(400, `“${o.name}” isn’t a list field.`);
         const current = target ? W.readValues(target, [field])[field.name] : { value: field.default };
         if (!Array.isArray(current.value)) throw httpError(400, 'This list is set from code on this page, so it can’t be edited here.');

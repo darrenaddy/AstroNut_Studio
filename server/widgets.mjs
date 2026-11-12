@@ -319,6 +319,51 @@ export function readValues(node, fields) {
   return out;
 }
 
+/**
+ * The fields of one placement: the widget's own fields, plus whatever this placement passes as a
+ * plain value. Many components take a prop without declaring a default for it (`tagline`, say), so
+ * the widget alone doesn't reveal it as something to type into — but `<Hero tagline="Free" />` does.
+ * A list of simple items written on the page (`items={[{ title: "…" }]}`) becomes a list field the same way.
+ */
+export function placementFields(node, fields, compSrc = '') {
+  const out = fields.map((f) => ({ ...f }));
+  let compDoc = null;
+  for (const a of node.attrs) {
+    if (!a.name || !/^[A-Za-z_$][\w$]*$/.test(a.name) || /^(class|className|id|slot|style|key)$/.test(a.name)) continue;
+    const at = out.findIndex((f) => f.name === a.name);
+    if (at >= 0 && out[at].type !== 'code') continue;
+    let value;
+    if (a.kind === 'string') value = A.decodeEntities(a.value);
+    else if (a.kind === 'bool') value = true;
+    else if (a.kind === 'expr') {
+      const lit = parseLiteral(a.value);
+      if (lit.ok && ['string', 'number', 'boolean'].includes(typeof lit.value)) value = lit.value;
+      else {
+        const js = parseJs(a.value);
+        if (js.ok && Array.isArray(js.value) && js.value.length > 0 && js.value.every(isSimpleItem)) value = js.value;
+      }
+    }
+    if (value === undefined) continue;
+    let type = 'text';
+    if (Array.isArray(value)) type = 'list';
+    else if (typeof value === 'boolean') type = 'toggle';
+    else if (typeof value === 'number') type = 'number';
+    else if (/^(src|image|photo|picture|avatar|logo|heroImage|cover)$/.test(a.name)) type = 'image';
+    else if (/^(href|link|url)$/i.test(a.name)) type = 'link';
+    else if (value.length > 90 || value.includes('\n')) type = 'longtext';
+    // No default: the component has none to fall back on, so the value always stays written on the page.
+    const field = { name: a.name, label: labelOf(a.name), type, default: undefined, placed: true };
+    if (at >= 0 && out[at].help) field.help = out[at].help;
+    if (type === 'list') {
+      compDoc ??= A.parse(compSrc);
+      Object.assign(field, listShape(compSrc, compDoc, a.name, value));
+    }
+    if (at >= 0) out[at] = field;
+    else out.push(field);
+  }
+  return out;
+}
+
 /** The attribute text for a value, e.g. `title="Hello"` or `open={false}`. */
 export function attrText(name, value) {
   if (typeof value === 'boolean' || typeof value === 'number') return `${name}={${value}}`;
@@ -348,7 +393,9 @@ export function setFieldValue(src, node, field, value) {
     if (JSON.stringify(value) === JSON.stringify(field.default)) return putAttr(src, node, field.name, null);
     const ls = src.lastIndexOf('\n', node.start - 1) + 1;
     const indent = /^[ \t]*/.exec(src.slice(ls, node.start))[0];
-    return putAttr(src, node, field.name, `${field.name}={${toJs(value, indent + '  ')}}`);
+    const was = node.attrs.find((x) => x.name === field.name)?.raw || '';
+    const quote = (was.match(/'/g) || []).length > (was.match(/"/g) || []).length ? "'" : '"';
+    return putAttr(src, node, field.name, `${field.name}={${toJs(value, indent + '  ', quote)}}`);
   }
   let v = value;
   if (field.type === 'toggle') v = !!value;
@@ -625,9 +672,11 @@ export function parseJs(text) {
 }
 
 /** Write a value back as tidy JS: one item per line, long items one key per line. */
-export function toJs(value, indent = '') {
-  const key = (k) => (/^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k));
-  const flat = (v) => (Array.isArray(v) ? `[${v.map(flat).join(', ')}]` : v && typeof v === 'object' ? `{ ${Object.entries(v).map(([k, x]) => `${key(k)}: ${flat(x)}`).join(', ')} }` : JSON.stringify(v));
+export function toJs(value, indent = '', quote = '"') {
+  // Strings follow the quote style the file already uses, unless that would need escaping.
+  const str = (v) => (quote === "'" && !/['\\\n\r]/.test(v) ? `'${v}'` : JSON.stringify(v));
+  const key = (k) => (/^[A-Za-z_$][\w$]*$/.test(k) ? k : str(k));
+  const flat = (v) => (Array.isArray(v) ? `[${v.map(flat).join(', ')}]` : v && typeof v === 'object' ? `{ ${Object.entries(v).map(([k, x]) => `${key(k)}: ${flat(x)}`).join(', ')} }` : typeof v === 'string' ? str(v) : JSON.stringify(v));
   if (!Array.isArray(value)) return flat(value);
   if (!value.length) return '[]';
   const inner = indent + '  ';

@@ -195,8 +195,8 @@ export function WidgetFields({ fields, values, onChange, onReset }: { fields: an
                 {values && st?.set && <span className="setdot" title="This placement has its own value" />}
               </label>
               {values && st?.set && onReset && (
-                <button className="sub" title="Go back to the widget’s default" onClick={() => onReset(f.name)}>
-                  <RotateCcw size={10} /> default
+                <button className="sub" title={f.placed ? 'Stop passing this value to the component' : 'Go back to the widget’s default'} onClick={() => onReset(f.name)}>
+                  <RotateCcw size={10} /> {f.placed ? 'remove' : 'default'}
                 </button>
               )}
             </div>
