@@ -5,6 +5,8 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { stampSource } from './astro-source.mjs';
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const [, , command = 'dev', portArg] = process.argv;
 const root = process.cwd();
@@ -18,7 +20,25 @@ try {
   process.exit(1);
 }
 
-function bridge() {
+// Adds the editor's own source markers to each .astro file as Vite loads it (see stampSource).
+function stampPlugin() {
+  return {
+    name: 'astronut-stamp',
+    enforce: 'pre',
+    load(id) {
+      if (!id.endsWith('.astro') || id.includes('\0') || id.includes('/node_modules/')) return null;
+      try {
+        return stampSource(fs.readFileSync(id, 'utf8'), id);
+      } catch {
+        return null; // unreadable or unparseable: let Astro handle the file as it is
+      }
+    },
+  };
+}
+
+let base = '/';
+
+function bridge(stamp) {
   return {
     name: 'astronut-bridge',
     hooks: {
@@ -26,7 +46,11 @@ function bridge() {
         if (command !== 'dev') return;
         injectScript('head-inline', fs.readFileSync(path.join(here, 'bridge.js'), 'utf8'));
         injectRoute({ pattern: '/__astronut/c/[id]', entrypoint: path.join(here, 'preview/component.astro'), prerender: true });
-        updateConfig({ vite: { server: { fs: { allow: [here, root] } } } });
+        injectRoute({ pattern: '/__astronut/probe', entrypoint: path.join(here, 'preview/probe.astro'), prerender: true });
+        updateConfig({ vite: { server: { fs: { allow: [here, root] } }, plugins: stamp ? [stampPlugin()] : [] } });
+      },
+      'astro:config:done'({ config }) {
+        base = config.base || '/';
       },
       // Astro's own list of routes — the editor uses it for its page list.
       'astro:routes:resolved'({ routes }) {
@@ -43,12 +67,25 @@ try {
     console.log('__ASTRONUT_BUILD_DONE__');
     process.exit(0);
   } else {
-    const server = await astro.dev({
-      root,
-      server: { port: Number(portArg) || 4601, host: '127.0.0.1' },
-      devToolbar: { enabled: true },
-      integrations: [bridge()],
-    });
+    const start = (stamp) =>
+      astro.dev({
+        root,
+        server: { port: Number(portArg) || 4601, host: '127.0.0.1' },
+        devToolbar: { enabled: true },
+        integrations: [bridge(stamp)],
+      });
+    let server = await start(false);
+    // Clicking in the preview depends on Astro marking each element with its source position.
+    // Some versions don't; when the probe page comes back unmarked, start again with our own marks.
+    const marked = await fetch(`http://127.0.0.1:${server.address.port}${base.replace(/\/?$/, '/')}__astronut/probe`)
+      .then((r) => (r.ok ? r.text() : null))
+      .then((html) => html == null || /data-astro-source-file="/.test(html))
+      .catch(() => true);
+    if (!marked) {
+      console.log('This version of Astro does not mark elements with their source position, so AstroNut Studio is adding its own marks.');
+      await server.stop().catch(() => {});
+      server = await start(true);
+    }
     console.log(`__ASTRONUT_READY__ ${server.address.port}`);
     const stop = async () => {
       await server.stop().catch(() => {});

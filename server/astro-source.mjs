@@ -531,3 +531,23 @@ export function pruneImport(src, name) {
   if (new RegExp(`\\b${name}\\b`).test(others)) return src;
   return rest;
 }
+
+// ---------------------------------------------------------------------------
+// Source markers
+// ---------------------------------------------------------------------------
+
+/**
+ * Mark every HTML element in a template with the file and position it came from, the way Astro's
+ * own compiler does in dev mode. Some Astro versions leave these marks out; the editor adds them
+ * itself there so that clicking an element in the preview can still find its source.
+ * Positions are those of the original text, so they match what `parse` reports.
+ */
+export function stampSource(src, file) {
+  const doc = parse(src);
+  const marks = doc.all
+    .filter((node) => node.type === 'element' && !RAW.has(node.name.toLowerCase()) && !getAttr(node, 'data-astro-source-file'))
+    .sort((a, b) => b.nameEnd - a.nameEnd);
+  let out = src;
+  for (const node of marks) out = out.slice(0, node.nameEnd) + ` data-astro-source-file="${escapeAttr(file)}" data-astro-source-loc="${node.loc}"` + out.slice(node.nameEnd);
+  return out;
+}
