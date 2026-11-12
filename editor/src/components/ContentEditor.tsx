@@ -8,7 +8,7 @@ import { Code } from './Code';
 import { Modal, Seg, Switch } from './ui';
 import { Media } from './LeftPanel';
 import { useDark } from './Inspector';
-import { previewUrl, visualBlocker } from './postPaths';
+import { previewUrl, srcForMedia, visualBlocker } from './postPaths';
 
 const PostEditor = lazy(() => import('./PostEditor'));
 const MODE_KEY = 'astronut.postMode';
@@ -19,6 +19,19 @@ const preferred = () => {
     return 'visual';
   }
 };
+
+/** A value the simple controls can't hold: an object, or a list with objects in it. */
+const isGroup = (v: any) => v != null && typeof v === 'object' && (!Array.isArray(v) || v.some((x) => x != null && typeof x === 'object'));
+
+/** What a date field shows. Dates are often typed as "Jul 08 2022"; the picker needs 2022-07-08. */
+function dateValue(v: any) {
+  if (!v) return '';
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export function ContentEditor() {
   const file = useStore((s) => s.entryFile);
@@ -58,6 +71,17 @@ export function ContentEditor() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
+
+  // A group of fields is edited in the file itself; pick up what was changed there when the code editor closes.
+  const codeFile = useStore((s) => s.codeFile);
+  useEffect(() => {
+    if (codeFile || !file || latest.current) return;
+    api
+      .get('/content/entry' + q({ file }))
+      .then((e) => setEntry((was: any) => (was ? { ...was, data: e.data, body: e.body } : was)))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeFile]);
 
   const flush = async () => {
     const e = latest.current;
@@ -122,7 +146,8 @@ export function ContentEditor() {
   const page = pages.find((p: any) => p.dynamic && p.route.split('/').includes(collection.name));
   const liveUrl = page ? page.route.replace(/\[\.\.\.[^\]]+\]|\[[^\]]+\]/, id) : null;
   const fields = [...collection.fields];
-  for (const k of Object.keys(entry.data)) if (!fields.some((f: any) => f.name === k)) fields.push({ name: k, type: typeof entry.data[k] === 'boolean' ? 'boolean' : Array.isArray(entry.data[k]) ? 'tags' : 'text' });
+  for (const k of Object.keys(entry.data)) if (!fields.some((f: any) => f.name === k)) fields.push({ name: k, type: typeof entry.data[k] === 'boolean' ? 'boolean' : isGroup(entry.data[k]) ? 'group' : Array.isArray(entry.data[k]) ? 'tags' : 'text' });
+  const pickingField = fields.find((f: any) => f.name === picking);
 
   return (
     <div className="content">
@@ -173,7 +198,7 @@ export function ContentEditor() {
           <div style={{ overflowY: 'auto', paddingBottom: 10 }}>
             <Media
               onPick={(m) => {
-                setField(picking, m.url);
+                setField(picking, pickingField?.asset ? srcForMedia(file, m) : m.url);
                 setPicking(null);
               }}
             />
@@ -186,6 +211,21 @@ export function ContentEditor() {
           {fields.map((f: any) => {
             const v = entry.data[f.name];
             const label = f.name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^\w/, (c: string) => c.toUpperCase());
+            if (f.type === 'group' || isGroup(v))
+              return (
+                <div className="field" key={f.name}>
+                  <label>
+                    {label}
+                    {f.required ? ' *' : ''}
+                  </label>
+                  <p className="note" style={{ margin: 0 }}>
+                    {v == null ? 'Not set. ' : Array.isArray(v) ? `A list of ${v.length} ${v.length === 1 ? 'item' : 'items'}, each with its own fields. ` : `A group of fields (${Object.keys(v).slice(0, 4).join(', ')}${Object.keys(v).length > 4 ? '…' : ''}). `}
+                    <button style={{ textDecoration: 'underline' }} onClick={() => useStore.setState({ codeFile: file })}>
+                      Edit it in the file
+                    </button>
+                  </p>
+                </div>
+              );
             if (f.type === 'boolean') return <Switch key={f.name} on={!!v} onChange={(x) => setField(f.name, x)} label={label} />;
             return (
               <div className="field" key={f.name}>
@@ -201,7 +241,7 @@ export function ContentEditor() {
                   </div>
                 ) : (
                   <div className="inp">
-                    <input type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'} value={v ?? ''} onChange={(e) => setField(f.name, f.type === 'number' ? Number(e.target.value) : e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
+                    <input type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'} value={f.type === 'date' ? dateValue(v) : v ?? ''} onChange={(e) => setField(f.name, f.type === 'number' ? Number(e.target.value) : e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
                   </div>
                 )}
                 {f.type === 'image' && (
@@ -209,7 +249,7 @@ export function ContentEditor() {
                     Choose an image
                   </button>
                 )}
-                {f.type === 'image' && v && <img src={(devUrl || '') + v} alt="" style={{ width: '100%', aspectRatio: '2/1', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />}
+                {f.type === 'image' && v && <img src={previewUrl(file, String(v), devUrl || '')} alt="" style={{ width: '100%', aspectRatio: '2/1', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />}
               </div>
             );
           })}
@@ -244,7 +284,7 @@ export function ContentEditor() {
               <Code key={file} value={entry.body} onChange={(body) => update({ body })} filename="entry.md" minimal dark={dark} />
             </div>
             <div className="md-preview">
-              {entry.data.heroImage && <img className="cover" src={(devUrl || '') + entry.data.heroImage} alt="" />}
+              {entry.data.heroImage && <img className="cover" src={previewUrl(file, String(entry.data.heroImage), devUrl || '')} alt="" />}
               <h1>{entry.data.title}</h1>
               {entry.data.description && <p className="lede">{entry.data.description}</p>}
               <div dangerouslySetInnerHTML={{ __html: html }} />

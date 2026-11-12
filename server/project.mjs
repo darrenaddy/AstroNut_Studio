@@ -920,60 +920,71 @@ export class Project {
 
   collections() {
     const cfgFile = this.contentConfigFile();
-    const cfg = cfgFile ? this.read(cfgFile) : '';
+    const cfg = stripComments(cfgFile ? this.read(cfgFile) : '');
+    // The name a collection goes by is its key in `export const collections = { blog: blogCollection }`,
+    // which need not be the name of the variable that defines it.
+    const exported = new Map();
+    const exp = /export\s+const\s+collections\s*=\s*\{([\s\S]*?)\}/.exec(cfg);
+    if (exp) for (const part of exp[1].split(',')) {
+      const kv = /^\s*['"]?([\w-]+)['"]?\s*(?::\s*(\w+))?\s*$/.exec(part);
+      if (kv) exported.set(kv[2] || kv[1], kv[1]);
+    }
     const found = new Map();
     // const blog = defineCollection({ loader: glob({ base: './src/content/blog', ... }), schema: z.object({ ... }) })
     const re = /(?:const|let|var)\s+(\w+)\s*=\s*defineCollection\s*\(/g;
     let m;
     while ((m = re.exec(cfg))) {
       const open = cfg.indexOf('(', m.index + m[0].length - 1);
-      let depth = 0;
-      let end = open;
-      for (let i = open; i < cfg.length; i++) {
-        if (cfg[i] === '(') depth++;
-        else if (cfg[i] === ')' && --depth === 0) {
-          end = i;
-          break;
-        }
-      }
-      const body = cfg.slice(open, end);
+      const body = cfg.slice(open, matchingClose(cfg, open));
       const base = /base:\s*['"]([^'"]+)['"]/.exec(body);
+      const pattern = /pattern:\s*(\[[^\]]*\]|['"][^'"]+['"])/.exec(body);
       const fields = [];
       const so = /z\.object\(\s*\{/.exec(body);
       if (so) {
-        const lines = body.slice(so.index + so[0].length).split('\n');
-        for (const line of lines) {
-          const f = /^\s*(\w+)\s*:\s*(.+?),?\s*$/.exec(line);
-          if (!f) {
-            if (/^\s*\}\s*\)/.test(line)) break;
-            continue;
-          }
+        const from = so.index + so[0].length - 1;
+        // `...commonFields` pulls in a set of fields declared once and shared between collections.
+        const parts = splitTopLevel(body.slice(from + 1, matchingClose(body, from))).flatMap((part) => {
+          const spread = /^\s*\.\.\.(\w+)\s*$/.exec(part);
+          const decl = spread && new RegExp(`(?:const|let|var)\\s+${spread[1]}\\s*=\\s*\\{`).exec(cfg);
+          if (!decl) return [part];
+          const at = decl.index + decl[0].length - 1;
+          return splitTopLevel(cfg.slice(at + 1, matchingClose(cfg, at)));
+        });
+        for (const part of parts) {
+          const f = /^\s*['"]?(\w+)['"]?\s*:\s*([\s\S]+?)\s*$/.exec(part);
+          if (!f) continue;
+          const dup = fields.findIndex((x) => x.name === f[1]);
+          if (dup >= 0) fields.splice(dup, 1); // a later declaration of the same field wins, as it does in the code
           const def = f[2];
           let type = 'text';
-          if (/z\.(coerce\.)?date/.test(def)) type = 'date';
+          if (/^z\s*\.\s*(object|record|tuple)\b|^z\s*\.\s*array\(\s*z\s*\.\s*object\b/.test(def)) type = 'group';
+          else if (/z\.(coerce\.)?date/.test(def)) type = 'date';
           else if (/z\.boolean/.test(def)) type = 'boolean';
           else if (/z\.(coerce\.)?number/.test(def)) type = 'number';
           else if (/z\.array/.test(def)) type = 'tags';
-          else if (/image|cover|thumbnail|photo|avatar/i.test(f[1])) type = 'image';
+          else if (/\bimage\(\)/.test(def) || (/image|cover|thumbnail|photo|avatar/i.test(f[1]) && !/(alt|caption|credit|title)$/i.test(f[1]))) type = 'image';
           else if (/description|summary|excerpt|bio/i.test(f[1])) type = 'textarea';
-          fields.push({ name: f[1], type, required: !/\.optional\(\)|\.default\(/.test(def) });
+          // `image()` is Astro's own image type: it wants a path relative to the entry, into src/.
+          fields.push({ name: f[1], type, required: /^(z\b|image\()/.test(def) && !/\.(optional|default|nullish|nullable)\(|z\s*\.\s*optional\(/.test(def), ...(/\bimage\(\)/.test(def) ? { asset: true } : {}) });
         }
       }
-      found.set(m[1], { name: m[1], dir: base ? toPosix(path.posix.normalize(base[1])).replace(/^\.\//, '') : `src/content/${m[1]}`, fields });
+      const name = exported.get(m[1]) || m[1];
+      found.set(name, { name, dir: base ? toPosix(path.posix.normalize(base[1])).replace(/^\.\//, '') : `src/content/${name}`, fields, match: pattern ? globMatcher(pattern[1]) : null });
     }
     // folders without config still show up
     const contentDir = path.join(this.root, 'src/content');
+    const taken = new Set([...found.values()].map((c) => c.dir));
     if (fs.existsSync(contentDir)) {
       for (const ent of fs.readdirSync(contentDir, { withFileTypes: true })) {
-        if (ent.isDirectory() && !ent.name.startsWith('_') && !found.has(ent.name)) found.set(ent.name, { name: ent.name, dir: `src/content/${ent.name}`, fields: [], unconfigured: true });
+        if (ent.isDirectory() && !ent.name.startsWith('_') && !found.has(ent.name) && !taken.has(`src/content/${ent.name}`)) found.set(ent.name, { name: ent.name, dir: `src/content/${ent.name}`, fields: [], unconfigured: true });
       }
     }
-    return [...found.values()].map((c) => {
-      const entries = this.entries(c);
+    return [...found.values()].map(({ match, ...c }) => {
+      const entries = this.entries(c).filter((e) => !match || match(e.file.slice(c.dir.length + 1)));
       if (!c.fields.length) {
         const keys = new Map();
         for (const e of entries) for (const [k, v] of Object.entries(e.data)) if (!keys.has(k)) keys.set(k, v);
-        c.fields = [...keys.entries()].map(([name, v]) => ({ name, required: false, type: v instanceof Date || /date/i.test(name) ? 'date' : typeof v === 'boolean' ? 'boolean' : Array.isArray(v) ? 'tags' : typeof v === 'number' ? 'number' : /image|cover/i.test(name) ? 'image' : /description|summary|excerpt/i.test(name) ? 'textarea' : 'text' }));
+        c.fields = [...keys.entries()].map(([name, v]) => ({ name, required: false, type: v instanceof Date || /date/i.test(name) ? 'date' : typeof v === 'boolean' ? 'boolean' : isGroup(v) ? 'group' : Array.isArray(v) ? 'tags' : typeof v === 'number' ? 'number' : /image|cover/i.test(name) && !/(alt|caption|credit|title)$/i.test(name) ? 'image' : /description|summary|excerpt/i.test(name) ? 'textarea' : 'text' }));
         if (!c.fields.length) c.fields = [{ name: 'title', type: 'text', required: true }];
       }
       return { ...c, entries: entries.map(({ body, ...e }) => e) };
@@ -1096,4 +1107,85 @@ export function httpError(status, message) {
   const e = new Error(message);
   e.status = status;
   return e;
+}
+
+// ---- reading content.config ----------------------------------------------
+// Remove line and block comments, leaving anything inside a string alone: a glob such as "**" + "/*.md" is not a comment.
+function stripComments(src) {
+  let out = '';
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === '`') {
+      const start = i;
+      for (i++; i < src.length && src[i] !== c; i++) if (src[i] === '\\') i++;
+      out += src.slice(start, i + 1);
+    } else if (c === '/' && src[i + 1] === '/') {
+      while (i < src.length && src[i] !== '\n') i++;
+      out += '\n';
+    } else if (c === '/' && src[i + 1] === '*') {
+      const end = src.indexOf('*/', i + 2);
+      i = end < 0 ? src.length : end + 1;
+    } else out += c;
+  }
+  return out;
+}
+
+/** Index of the bracket that closes the one at `open`. Strings are skipped. */
+function matchingClose(src, open) {
+  const pairs = { '(': ')', '[': ']', '{': '}' };
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === '`') {
+      for (i++; i < src.length && src[i] !== c; i++) if (src[i] === '\\') i++;
+    } else if (pairs[c]) depth++;
+    else if ((c === ')' || c === ']' || c === '}') && --depth === 0) return i;
+  }
+  return src.length;
+}
+
+/** Split "a: x, b: f(y, z)" at the commas that are not inside brackets or strings. */
+function splitTopLevel(src) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === '`') {
+      for (i++; i < src.length && src[i] !== c; i++) if (src[i] === '\\') i++;
+    } else if ('([{'.includes(c)) depth++;
+    else if (')]}'.includes(c)) depth--;
+    else if (c === ',' && depth === 0) {
+      parts.push(src.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(src.slice(start));
+  return parts.filter((p) => p.trim());
+}
+
+/** A value the simple field controls can't hold: an object, or a list with objects in it. */
+const isGroup = (v) => v != null && typeof v === 'object' && !(v instanceof Date) && (!Array.isArray(v) || v.some((x) => x != null && typeof x === 'object'));
+
+/** Turn a loader's `pattern` (one glob, or a list of them, as written in the config) into a test for a path. */
+function globMatcher(text) {
+  const globs = [...text.matchAll(/['"]([^'"]+)['"]/g)].map((g) => g[1]);
+  const tests = globs.map((g) => {
+    let re = '';
+    for (let i = 0; i < g.length; i++) {
+      const c = g[i];
+      if (c === '*' && g[i + 1] === '*') {
+        re += g[i + 2] === '/' ? '(?:.*/)?' : '.*';
+        i += g[i + 2] === '/' ? 2 : 1;
+      } else if (c === '*') re += '[^/]*';
+      else if (c === '?') re += '[^/]';
+      else if (c === '{') re += '(?:';
+      else if (c === '}') re += ')';
+      else if (c === ',' && g.lastIndexOf('{', i) > g.lastIndexOf('}', i)) re += '|';
+      else re += c.replace(/[.+^$()|[\]\\]/g, '\\$&');
+    }
+    return { not: g.startsWith('!'), re: new RegExp('^' + re.replace(/^!/, '') + '$') };
+  });
+  if (!tests.length) return null;
+  return (p) => tests.some((t) => !t.not && t.re.test(p)) && !tests.some((t) => t.not && t.re.test(p));
 }
