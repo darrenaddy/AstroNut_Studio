@@ -648,7 +648,10 @@ function ContentTab() {
               {e.draft && <span className="badge">Draft</span>}
             </div>
           ))}
-          {!c.entries.length && <div className="hint" style={{ padding: '4px 14px' }}>Empty — press + to add an entry.</div>}
+          <div className="row" style={{ paddingLeft: 24, color: 'var(--accent)', fontWeight: 500 }} onClick={() => newEntry(c)}>
+            <Plus size={13} style={{ flex: 'none' }} />
+            <span className="label">{/^(blog|posts?|news|articles?)$/i.test(c.name) ? 'New post' : 'New entry'}</span>
+          </div>
         </div>
       ))}
     </div>
