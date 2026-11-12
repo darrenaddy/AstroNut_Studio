@@ -264,8 +264,8 @@ function LighthouseCheck() {
   useEffect(() => {
     load();
     const on = (e: any) => e.detail.kind === 'lighthouse' && setProgress(e.detail.state === 'running' ? e.detail : null);
-    window.addEventListener('astrophile-check', on);
-    return () => window.removeEventListener('astrophile-check', on);
+    window.addEventListener('astronut-check', on);
+    return () => window.removeEventListener('astronut-check', on);
   }, []);
 
   const run = async (routes?: string[]) => {

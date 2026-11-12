@@ -11,7 +11,7 @@ import { useDark } from './Inspector';
 import { previewUrl, visualBlocker } from './postPaths';
 
 const PostEditor = lazy(() => import('./PostEditor'));
-const MODE_KEY = 'astrophile.postMode';
+const MODE_KEY = 'astronut.postMode';
 const preferred = () => {
   try {
     return localStorage.getItem(MODE_KEY) === 'markdown' ? 'markdown' : 'visual';

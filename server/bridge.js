@@ -1,9 +1,9 @@
-// Astrophile Studio canvas bridge.
+// AstroNut Studio canvas bridge.
 // Injected into every page of the site *only* by the editor's dev server, and
 // it does nothing unless the page is inside the editor's canvas iframe.
 (() => {
-  if (window.parent === window || window.__astrophile) return;
-  window.__astrophile = true;
+  if (window.parent === window || window.__astronut) return;
+  window.__astronut = true;
 
   // Astro's dev server stamps every element with the file + position it came
   // from, but its dev toolbar strips those attributes again once it boots. We
@@ -32,8 +32,8 @@
     }
   }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: [SRC_FILE, SRC_LOC], attributeOldValue: true });
   adoptTree(document.documentElement);
-  const DRAG_TYPE = 'application/x-astrophile';
-  const post = (type, data) => window.parent.postMessage({ __astrophile: true, type, ...data }, '*');
+  const DRAG_TYPE = 'application/x-astronut';
+  const post = (type, data) => window.parent.postMessage({ __astronut: true, type, ...data }, '*');
   const store = {
     get(k) {
       try {
@@ -137,7 +137,7 @@
   // ---- overlay -----------------------------------------------------------
   function buildOverlay() {
     if (overlay) return;
-    const host = document.createElement('astrophile-overlay');
+    const host = document.createElement('astronut-overlay');
     host.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2147483646;';
     const root = host.attachShadow({ mode: 'open' });
     root.innerHTML = `
@@ -432,7 +432,7 @@
   // ---- messages from the editor -----------------------------------------
   window.addEventListener('message', (e) => {
     const m = e.data;
-    if (!m || !m.__astrophile_cmd) return;
+    if (!m || !m.__astronut_cmd) return;
     switch (m.type) {
       case 'select': {
         const el = find(m.key);

@@ -2,15 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "astrophile-studio",
+      "name": "astronut-studio",
       "runtimeExecutable": "node",
       "runtimeArgs": ["server/index.mjs"],
       "port": 4600
     },
     {
-      "name": "astrophile-mock-ai",
+      "name": "astronut-mock-ai",
       "runtimeExecutable": "env",
-      "runtimeArgs": ["ASTROPHILE_MOCK_AI=1", "PORT=4610", "ASTROPHILE_SITE_PORT=4651", "node", "server/index.mjs"],
+      "runtimeArgs": ["ASTRONUT_MOCK_AI=1", "PORT=4610", "ASTRONUT_SITE_PORT=4651", "node", "server/index.mjs"],
       "port": 4610
     }
   ]

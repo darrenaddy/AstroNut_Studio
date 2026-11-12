@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Astrophile Studio — a visual editor for Astro sites.
+// AstroNut Studio — a visual editor for Astro sites.
 //   npm start                 edit the bundled starter site in ./site
 //   npm start -- ../my-site   edit any other Astro project
 import express from 'express';
@@ -15,7 +15,7 @@ import { Assistant, chatgpt, invalidateModels, listModels, publicSettings, saveP
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const editorRoot = path.join(here, '..', 'editor');
-const projectRoot = path.resolve(process.argv[2] || process.env.ASTROPHILE_PROJECT || path.join(here, '..', 'site'));
+const projectRoot = path.resolve(process.argv[2] || process.env.ASTRONUT_PROJECT || path.join(here, '..', 'site'));
 const PORT = Number(process.env.PORT) || 4600;
 
 if (!fs.existsSync(path.join(projectRoot, 'package.json'))) {
@@ -32,7 +32,7 @@ const broadcast = (ev) => {
 const dev = new DevServer(projectRoot, broadcast);
 project.routes = () => dev.routes;
 const assistant = new Assistant(project);
-const fonts = new Fonts(project, process.env.ASTROPHILE_HOME || path.join(here, '..', '.astrophile'));
+const fonts = new Fonts(project, process.env.ASTRONUT_HOME || path.join(here, '..', '.astronut'));
 // Astro reads its config once at start-up, so a config change needs the dev server restarted.
 const restartIfConfig = (step) => {
   if (step?.changes?.some((c) => /^astro\.config\./.test(c.file))) dev.restart().catch(() => {});
@@ -56,7 +56,7 @@ const wrap = (fn) => async (req, res) => {
     const out = await fn(req, res);
     if (!res.headersSent) res.json(out ?? { ok: true });
   } catch (e) {
-    if (!e.status) console.error('[astrophile]', e);
+    if (!e.status) console.error('[astronut]', e);
     if (!res.headersSent) res.status(e.status || 500).json({ error: e.message || String(e) });
   }
 };
@@ -125,7 +125,7 @@ api.put('/fonts', wrap(async (req) => {
 }));
 
 // ---- checks: images while editing, images after building, Lighthouse ---------------
-const lighthouse = new Lighthouse(project, process.env.ASTROPHILE_HOME || path.join(here, '..', '.astrophile'), broadcast);
+const lighthouse = new Lighthouse(project, process.env.ASTRONUT_HOME || path.join(here, '..', '.astronut'), broadcast);
 api.get('/checks/images', wrap(() => imageCheck(project)));
 api.post('/checks/fix', wrap((req) => fixImage(project, req.body)));
 api.get('/checks/built', wrap(() => builtImageCheck(project)));
@@ -203,7 +203,7 @@ const vite = await createServer({
 app.use(vite.middlewares);
 
 const server = app.listen(PORT, '127.0.0.1', async () => {
-  console.log(`\n  ✦ Astrophile Studio is running\n\n    Editor   http://localhost:${PORT}\n    Project  ${projectRoot}\n`);
+  console.log(`\n  ✦ AstroNut Studio is running\n\n    Editor   http://localhost:${PORT}\n    Project  ${projectRoot}\n`);
   await dev.start();
 });
 server.on('error', (e) => {

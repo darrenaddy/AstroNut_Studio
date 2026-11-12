@@ -847,7 +847,7 @@ function ComponentPanel() {
               </button>
             </div>
           ) : (
-            <p className="note">Astrophile Studio couldn’t find this component’s file from the page’s imports.</p>
+            <p className="note">AstroNut Studio couldn’t find this component’s file from the page’s imports.</p>
           )}
           {comp && comp.kind !== 'layout' && info.componentFile !== SMART_IMAGE && (
             <div className="usedon">

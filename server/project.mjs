@@ -1081,7 +1081,7 @@ function safe(fn, fallback) {
   try {
     return fn();
   } catch (e) {
-    console.error('[astrophile]', e.message);
+    console.error('[astronut]', e.message);
     return fallback;
   }
 }

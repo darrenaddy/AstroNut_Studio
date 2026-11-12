@@ -44,7 +44,7 @@ export function Chat() {
     setText('');
     act().ask(t.trim());
   };
-  const isComponent = path.startsWith('/__astrophile/');
+  const isComponent = path.startsWith('/__astronut/');
   const suggestions = sel
     ? ['Make this stand out more', 'Rewrite this text to be punchier', 'Add a subtle hover effect to this', 'Make this look better on phones']
     : ['Add a section with three customer stories after the hero', 'Create a “Careers” page with two open roles and add it to the header', 'Change the whole site to a warm, earthy colour scheme', 'Write a new blog post about our approach to remote work'];
@@ -270,7 +270,7 @@ function Providers({ list, onSaved }: { list: any; onSaved: () => void }) {
         ))}
       </div>
       <p className="sub" style={{ margin: 0, lineHeight: 1.5 }}>
-        Local models run entirely on this Mac: install Ollama or LM Studio, download a model that supports tool use (for example <code>qwen3</code> or <code>qwen2.5-coder</code>), and it appears here. Any other service that speaks the OpenAI-compatible API works through “Custom endpoint”. Keys are stored only in <code>.astrophile/settings.json</code> on this computer.
+        Local models run entirely on this Mac: install Ollama or LM Studio, download a model that supports tool use (for example <code>qwen3</code> or <code>qwen2.5-coder</code>), and it appears here. Any other service that speaks the OpenAI-compatible API works through “Custom endpoint”. Keys are stored only in <code>.astronut/settings.json</code> on this computer.
       </p>
     </div>
   );
@@ -336,7 +336,7 @@ function ChatGPTRow({ p, onChanged }: { p: any; onChanged: () => void }) {
               className="btn sm"
               onClick={async () => {
                 const r = await api.post('/ai/chatgpt/signout').catch(() => null);
-                if (r && !r.revoked) act().toast('Signed out here. OpenAI didn’t confirm it — you can also disconnect Astrophile Studio in ChatGPT settings.');
+                if (r && !r.revoked) act().toast('Signed out here. OpenAI didn’t confirm it — you can also disconnect AstroNut Studio in ChatGPT settings.');
                 onChanged();
               }}
             >
@@ -460,7 +460,7 @@ export function Settings() {
             </div>
           )}
           <p className="sub" style={{ margin: 0, lineHeight: 1.5 }}>
-            No key needed if you sign in: run <code>ant auth login</code> in a terminal and reopen Settings. Or paste a key from console.anthropic.com — it is stored only on this computer (in <code>.astrophile/settings.json</code>, which Git ignores) and is sent only to Anthropic. A saved key takes priority over the sign-in.
+            No key needed if you sign in: run <code>ant auth login</code> in a terminal and reopen Settings. Or paste a key from console.anthropic.com — it is stored only on this computer (in <code>.astronut/settings.json</code>, which Git ignores) and is sent only to Anthropic. A saved key takes priority over the sign-in.
           </p>
         </div>
         <div className="cols">
@@ -700,7 +700,7 @@ export function Welcome() {
   return (
     <Modal onClose={() => act().closeWelcome()} className="welcome">
       <div className="hero">
-        <img src="/astrophile.svg" width={40} height={40} alt="" />
+        <img src="/astronut.svg" width={40} height={40} alt="" />
         <h1>Build your Astro site by pointing, clicking and asking.</h1>
         <p>
           This is a live preview of <b>{name}</b> — a real Astro project on your computer. Everything you do here is written straight into its source files, so there is nothing to export and nothing locked in.
