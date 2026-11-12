@@ -1,4 +1,6 @@
 ---
+// Imports come first: older Astro compilers mangle an import statement that follows an exported function.
+import 'virtual:astronut-styles';
 // Renders a single component or layout on its own, for the editor's canvas.
 // This file lives in the editor, not in your site — it is only routed in dev.
 export function getStaticPaths() {
@@ -7,7 +9,6 @@ export function getStaticPaths() {
     params: { id: key.replace(/^\/src\//, '').replace(/\.astro$/, '').split('/').join('~') },
   }));
 }
-import 'virtual:astronut-styles';
 const files = import.meta.glob(['/src/**/*.astro', '!/src/pages/**']);
 const { id } = Astro.params;
 const key = '/src/' + String(id).split('~').join('/') + '.astro';
