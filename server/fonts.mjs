@@ -65,16 +65,26 @@ export class Fonts {
     if (!file) return { file: null, supported: false, roles: [] };
     const parsed = readFonts(this.project.read(file));
     const entries = parsed?.entries || [];
-    const roles = ROLES.map((r) => {
+    // The three roles the starter uses are offered when the project declares them or its styles refer to
+    // them. Any other font the project declares is listed under its own CSS variable, so it can be changed too.
+    const used = this.project
+      .walk('src', (n) => /\.(css|astro)$/.test(n))
+      .map((f) => this.project.readOr(f, ''))
+      .join('\n');
+    const own = ROLES.map((r) => {
       const e = entries.find((x) => x.cssVariable === r.cssVariable);
       return { ...r, name: e?.name || null, provider: e?.provider || null };
-    });
-    return { file, supported: roles.some((r) => r.name), roles, others: entries.filter((e) => !ROLES.some((r) => r.cssVariable === e.cssVariable)).map((e) => ({ name: e.name, cssVariable: e.cssVariable })) };
+    }).filter((r) => r.name || (used.includes(`var(${r.cssVariable}`) && !new RegExp(`${r.cssVariable}\\s*:`).test(used))); // not when the project's CSS sets that variable itself
+    const others = entries
+      .filter((e) => e.cssVariable && !ROLES.some((r) => r.cssVariable === e.cssVariable))
+      .map((e) => ({ id: e.cssVariable, label: e.cssVariable, cssVariable: e.cssVariable, sample: 'The quick brown fox jumps over the lazy dog.', name: e.name, provider: e.provider || null }));
+    const roles = [...own, ...others];
+    return { file, supported: roles.some((r) => r.name), roles };
   }
 
   /** Point a role at a font from the catalogue. */
   async setRole(roleId, fontId) {
-    const role = ROLES.find((r) => r.id === roleId);
+    const role = this.state().roles.find((r) => r.id === roleId);
     if (!role) throw new Error('Unknown font role.');
     const font = (await this.catalogue()).find((f) => f.id === fontId);
     if (!font) throw new Error('That font isn’t in the catalogue.');

@@ -42,7 +42,11 @@ export function FontRoles() {
   if (!state) return null;
   return (
     <Group title="Typography" id="theme-type">
-      {!state.supported ? (
+      {!state.roles.length ? (
+        <p className="note" style={{ margin: 0 }}>
+          This project doesn’t list its fonts in its Astro config, so there are none to change here. Its typefaces are set in its own CSS.
+        </p>
+      ) : !state.supported ? (
         <p className="note" style={{ margin: 0 }}>
           This project doesn’t declare fonts in its Astro config yet. Pick one below and it will be added for you.
         </p>
@@ -50,7 +54,7 @@ export function FontRoles() {
       {state.roles.map((r: any) => (
         <RoleRow key={r.id} role={r} onPick={() => setPicking(r)} />
       ))}
-      <p className="sub" style={{ margin: 0, lineHeight: 1.45 }}>Astro downloads each font and serves it from your own site — nothing loads from a font service when visitors arrive.</p>
+      {state.roles.length > 0 && <p className="sub" style={{ margin: 0, lineHeight: 1.45 }}>Astro downloads each font and serves it from your own site — nothing loads from a font service when visitors arrive.</p>}
       {picking && (
         <FontPicker
           role={picking}
