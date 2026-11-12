@@ -8,7 +8,8 @@
     "start": "node server/index.mjs",
     "dev": "node server/index.mjs",
     "postinstall": "npm --prefix site install --no-audit --no-fund",
-    "typecheck": "tsc --noEmit -p editor"
+    "typecheck": "tsc --noEmit -p editor",
+    "check": "node scripts/check-project.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
