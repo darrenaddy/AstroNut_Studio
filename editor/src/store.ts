@@ -222,7 +222,7 @@ export const useStore = create<State>((set, get) => {
     const s = get().selection;
     if (!s) return;
     try {
-      const info = await api.post('/node', { file: s.file, ref: s.start != null ? { start: s.start, loc: s.loc, name: s.info?.name } : { loc: s.loc } });
+      const info = await api.post('/node', { file: s.file, ref: s.start != null ? { start: s.start, loc: s.loc, name: s.info?.name } : { loc: s.loc, tag: s.el?.tag } });
       const cur = get().selection;
       if (cur && cur.file === s.file && cur.loc === s.loc) set({ selection: { ...cur, info, start: info.start, loc: info.loc } });
     } catch {

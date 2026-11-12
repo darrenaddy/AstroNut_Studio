@@ -292,20 +292,38 @@ export function parse(src) {
   parseChildren(root, templateStart);
 
   // ---- location index ----------------------------------------------------
+  // Astro marks an element with the position of its first child: the text or expression right after
+  // the opening tag, or one character into a child element that follows it directly (`<li><a …>`).
+  // An element with nothing inside it is marked one character into its own tag.
+  // Two elements can therefore share a position (`<div><img /></div>`); the tag name tells them apart.
   const byLoc = new Map();
+  const keyOf = (offset) => {
+    const l = locOf(offset);
+    return `${l.line}:${l.col}`;
+  };
+  const put = (key, node, first) => {
+    const list = byLoc.get(key) || [];
+    if (!list.includes(node)) first ? list.unshift(node) : list.push(node);
+    byLoc.set(key, list);
+  };
   for (const node of all) {
-    const a = locOf(node.openEnd);
-    const b = locOf(node.start + 1);
-    node.loc = node.isVoid ? `${b.line}:${b.col}` : `${a.line}:${a.col}`;
+    // Custom elements (`<theme-toggle>`) are marked at their own tag as well, whatever they contain.
+    const empty = node.isVoid || node.closeStart === node.openEnd || (node.type === 'element' && node.name.includes('-'));
+    const wraps = !empty && node.children[0]?.start === node.openEnd;
+    node.loc = keyOf(empty ? node.start + 1 : wraps ? node.openEnd + 1 : node.openEnd);
     node.line = locOf(node.start).line;
-    for (const l of [a, b]) {
-      const key = `${l.line}:${l.col}`;
-      if (!byLoc.has(key)) byLoc.set(key, node);
-    }
   }
+  // The position Astro uses comes first; the others are kept as fallbacks for marks made differently.
+  for (const node of all) put(node.loc, node, true);
+  for (const node of all) for (const off of [node.openEnd, node.start + 1]) put(keyOf(off), node, false);
 
-  function findByLoc(loc) {
-    if (byLoc.has(loc)) return byLoc.get(loc);
+  /** The node at a position. `name` (the tag clicked) settles it when two nodes share the position. */
+  function findByLoc(loc, name) {
+    const list = byLoc.get(loc);
+    if (list) {
+      const want = name && String(name).toLowerCase();
+      return (want && (list.find((x) => x.loc === loc && x.name.toLowerCase() === want) || list.find((x) => x.name.toLowerCase() === want))) || list[0];
+    }
     const [line, col] = String(loc).split(':').map(Number);
     let best = null;
     let bestD = Infinity;

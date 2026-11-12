@@ -402,10 +402,10 @@ export class Project {
   locate(doc, ref) {
     let node = null;
     if (ref?.start != null) node = doc.findByStart(ref.start);
-    if (!node && ref?.loc) node = doc.findByLoc(ref.loc);
+    if (!node && ref?.loc) node = doc.findByLoc(ref.loc, ref.name || ref.tag);
     if (!node) throw httpError(409, 'That element could not be found in the source — it may have changed. Try selecting it again.');
     if (ref.name && node.name !== ref.name && ref.start != null && ref.loc) {
-      const alt = doc.findByLoc(ref.loc);
+      const alt = doc.findByLoc(ref.loc, ref.name);
       if (alt && alt.name === ref.name) node = alt;
     }
     return node;
