@@ -330,6 +330,7 @@ function DesignTab() {
   const variantBp = useStore((s) => s.variant);
   const variantState = useStore((s) => s.stateVariant);
   const pages = useStore((s) => s.data?.pages || EMPTY);
+  const tailwind = useStore((s) => s.data?.project?.tailwind !== false);
   const [sides, setSides] = useState<Record<string, boolean>>({});
   const [picker, setPicker] = useState(false);
   const info = sel.info;
@@ -343,6 +344,20 @@ function DesignTab() {
   const setMany = (changes: Record<string, string | null>) => act().setClasses(tw.setMany(classes, v, changes));
 
   const ctx = { g, setG, others: (group: string) => tw.otherVariants(classes, group, v) };
+
+  if (!tailwind) {
+    return (
+      <div className="empty-insp">
+        {ContentGroup()}
+        <p className="note" style={{ padding: '4px 0 12px' }}>
+          The style controls work by writing <b>Tailwind CSS</b> classes, and this project doesn’t use Tailwind, so they are switched off here. Text, images, moving and deleting still work. To restyle this element, edit its CSS in the <b>Source</b> tab — or ask the AI to.
+        </p>
+        <button className="btn block" onClick={() => useStore.setState({ inspectorTab: 'source' })}>
+          <Code2 size={14} /> Open Source tab
+        </button>
+      </div>
+    );
+  }
 
   if (!info.classEditable) {
     return (
@@ -1072,6 +1087,11 @@ function PagePanel() {
     else go();
   };
   const brand500 = theme.theme['--color-brand-500'] || '#7445ff';
+  // Only offer the controls whose values this project actually defines.
+  const tailwind = data?.project?.tailwind !== false;
+  const hasBrand = '--color-brand-500' in theme.theme;
+  const hasSem = ['--bg', '--fg'].every((name) => name in theme.light || name in theme.dark); // one shared name (shadcn's --muted, say) is a coincidence, not our colour set
+  const hasShape = '--radius-card' in theme.theme || '--radius-button' in theme.theme;
   const setBrand = (hex: string, debounce = false) => {
     const scale = tw.makeScale(hex);
     const vars: Record<string, string> = {};
@@ -1103,6 +1123,11 @@ function PagePanel() {
         <p className="note">Nothing is selected. Click anything on the page to style it — or set up the page and your site-wide theme here.</p>
       </div>
       <div className="scroll">
+        {data?.project?.devScript && (
+          <div className="hint" style={{ textAlign: 'left' }}>
+            This project’s own start command does more than start Astro: <code>{data.project.devScript}</code>. AstroNut Studio starts Astro on its own, so those extra steps don’t run here. If the preview shows a missing-file error, run <code>{data.project.packageManager || 'npm'} run dev</code> once in the project’s folder, stop it, then restart the preview.
+          </div>
+        )}
         {!page && pageFile && <WidgetDefaults file={pageFile} />}
         {page && rootInfo && (
           <Group title="Page" id="page-settings">
@@ -1120,11 +1145,23 @@ function PagePanel() {
           </Group>
         )}
 
-        {!theme.file ? (
-          <div className="hint">No theme tokens found in this project’s CSS.</div>
+        {!theme.file || (!hasBrand && !hasSem && !hasShape) ? (
+          <>
+            <div className="hint" style={{ textAlign: 'left' }}>
+              The colour and shape controls edit named values in a Tailwind <code>@theme</code> block (<code>--color-brand-500</code>, <code>--radius-card</code> and so on). This project’s CSS doesn’t define them, so there is nothing for them to change here.
+            </div>
+            {tailwind && <FontRoles />}
+            {theme.file && (
+              <div style={{ padding: 14 }}>
+                <button className="btn block ghost" onClick={() => useStore.setState({ codeFile: theme.file })}>
+                  <Code2 size={14} /> Edit the site’s CSS
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <>
-            <Group title="Brand colour" id="theme-brand">
+            {hasBrand && <Group title="Brand colour" id="theme-brand">
               <div className="scale">
                 {tw.SCALE_STEPS.map((s) => (
                   <i key={s} style={{ background: theme.theme[`--color-brand-${s}`] }} title={`brand-${s}`} />
@@ -1141,9 +1178,9 @@ function PagePanel() {
                 <HexField value={brand500} onCommit={(hex) => setBrand(hex)} />
               </div>
               <p className="sub" style={{ margin: 0 }}>Buttons, links and highlights follow this colour. Lighter and darker shades are generated from it.</p>
-            </Group>
+            </Group>}
 
-            <Group title={`Colours · ${scope} mode`} id="theme-sem">
+            {hasSem && <Group title={`Colours · ${scope} mode`} id="theme-sem">
               {SEM.map(([name, label, util]) => (
                 <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="color" value={tw.normalizeHex(sem[name] || '') || '#888888'} onChange={(e) => putTheme(scope, { [name]: e.target.value }, true)} />
@@ -1152,11 +1189,11 @@ function PagePanel() {
                 </div>
               ))}
               <p className="sub" style={{ margin: 0 }}>Switch the preview to {scope === 'dark' ? 'light' : 'dark'} mode (☀︎ / ☾ above the page) to edit the other set.</p>
-            </Group>
+            </Group>}
 
             <FontRoles />
 
-            <Group title="Shape" id="theme-shape">
+            {hasShape && <Group title="Shape" id="theme-shape">
               <div className="field">
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <label className="lbl">Card corners</label>
@@ -1176,7 +1213,7 @@ function PagePanel() {
                   ]}
                 />
               </div>
-            </Group>
+            </Group>}
             <div style={{ padding: 14 }}>
               <button className="btn block ghost" onClick={() => useStore.setState({ codeFile: theme.file })}>
                 <Code2 size={14} /> Edit theme CSS

@@ -1077,7 +1077,15 @@ export class Project {
       pkg = JSON.parse(this.read('package.json'));
     } catch {}
     return {
-      project: { name: pkg.name || path.basename(this.root), root: this.root },
+      project: {
+        name: pkg.name || path.basename(this.root),
+        root: this.root,
+        // The Design panel works by writing Tailwind classes, so it needs to know whether they would do anything.
+        tailwind: ['tailwindcss', '@tailwindcss/vite', '@astrojs/tailwind'].some((d) => pkg.dependencies?.[d] || pkg.devDependencies?.[d]),
+        packageManager: this.exists('pnpm-lock.yaml') ? 'pnpm' : this.exists('yarn.lock') ? 'yarn' : this.exists('bun.lock') || this.exists('bun.lockb') ? 'bun' : 'npm',
+        // A dev script that does more than start Astro (generating files first, say) — the editor starts Astro itself and skips those steps.
+        devScript: pkg.scripts?.dev && !/^\s*astro\s+dev(\s+--[\w-]+(=\S+)?)*\s*$/.test(pkg.scripts.dev) ? pkg.scripts.dev : null,
+      },
       pages: this.pages(),
       ...this.components(),
       media: this.media(),

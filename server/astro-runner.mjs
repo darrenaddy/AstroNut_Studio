@@ -16,7 +16,8 @@ let astro;
 try {
   astro = await import(pathToFileURL(require.resolve('astro')).href);
 } catch (e) {
-  console.error(`Could not load Astro from ${root}. Run "npm install" in that folder first.\n${e.message}`);
+  const pm = fs.existsSync(path.join(root, 'pnpm-lock.yaml')) ? 'pnpm' : fs.existsSync(path.join(root, 'yarn.lock')) ? 'yarn' : 'npm';
+  console.error(`Could not load Astro from ${root}. Run "${pm} install" in that folder first.\n${e.message}`);
   process.exit(1);
 }
 
