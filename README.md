@@ -117,17 +117,36 @@ What works depends on how the project is built:
 
 | | Works when |
 |---|---|
-| Selecting, layers, moving, duplicating, deleting, source editing, pages, the assistant | Any Astro project. Clicking in the preview relies on Astro marking each element with its source position; on Astro versions that leave the marks out, the editor adds its own. |
+| Selecting, layers, moving, duplicating, deleting, source editing, pages, the assistant | Any Astro project, for everything written in its `.astro` files. Clicking in the preview relies on Astro marking each element with its source position; on Astro versions that leave the marks out, the editor adds its own. |
+| Elements drawn by React, Vue, Svelte or another framework | Not individually. They carry no source position, so a click selects the nearest `.astro` element around them, and framework components are not listed. The same goes for the rendered body of a Markdown page. |
 | Editing text on the page | The text is written in the `.astro` file. Text a page passes to a component as a plain value (`<Hero tagline="Free" />`), or as a list of simple items, is edited as a field of that placement. Text from a slot, a content entry or a value computed in code is edited where it lives. |
 | Components and layouts | Any `.astro` file outside `src/pages`, wherever the project keeps it. |
 | Fonts | The project lists its fonts under `fonts` in its Astro config. Each one can be swapped, under the CSS variable the project gave it. |
 | Design panel | The project uses Tailwind CSS. Without it the style controls are switched off, since the classes they write would do nothing. |
 | Theme panel | The project's CSS defines the values each control edits (`--color-brand-500`, `--bg` and `--fg`, `--radius-card`). Controls for values it doesn't define are hidden. |
-| Content tab | Collections declared with `defineCollection` and a `glob` loader. Fields that hold a group or a list of groups are shown but edited in the file. |
+| Content tab | Collections declared with `defineCollection` whose entries are Markdown or MDX files in a folder. Fields that hold a group or a list of groups are shown but edited in the file. |
+| Sites whose pages come from an integration (Starlight) | The Content tab, image checks and builds. There are no pages in `src/pages` to design, and the File tab says so. |
 
 If the project's `dev` script does more than run `astro dev` (generating files first, for example), the editor says so: it starts Astro itself, so run that script once yourself if the preview reports a missing file.
 
-Tried on Astro's blog starter, [AstroWind](https://github.com/arthelokyo/astrowind) and [Astroplate](https://github.com/zeon-studio/astroplate), on Astro 7.1, 7.3 and 7.4. Earlier major versions of Astro have not been tried.
+The check described below passes on these projects, with every edit it makes undone cleanly:
+
+| Project | Astro |
+|---|---|
+| The bundled starter, Astro's blog, portfolio and React starters, [AstroPaper](https://github.com/satnaing/astro-paper) | 7.4 |
+| [AstroWind](https://github.com/arthelokyo/astrowind) | 7.3 |
+| [Astroplate](https://github.com/zeon-studio/astroplate) | 7.1 |
+| AstroPaper 5.5 | 5.16 |
+| AstroPaper 4.8 (Tailwind 3) | 4.16 |
+| Astro's Starlight starter (content and checks only) | 7.4 |
+
+That check drives the editor's server, not a browser. The blog starter, AstroWind and Astroplate were also used by hand in the editor; the rest were not, and Astro 6 has not been tried at all.
+
+To see what works on a particular project before opening it, run the check. It starts the editor against the project, resolves every element on the home page back to its source, tries each kind of edit, undoes every one, and confirms the project's files are left as they were. It does not cover what needs a browser: dragging, the visual post editor and the assistant.
+
+```bash
+npm run check -- /path/to/another/astro-site
+```
 
 Other settings: `PORT=4700 npm start` changes the editor's port.
 
@@ -154,4 +173,5 @@ The trick that makes visual editing possible: in dev mode Astro stamps every ren
 
 - Elements produced by code — the body of a `.map()` loop, or something inside `{condition && …}` — can be restyled, but not moved, duplicated or deleted visually. Use the Source tab or the assistant for those.
 - Editing an element that lives in a component changes that component everywhere it is used. The inspector tells you when that is the case.
+- Changing a field of a content entry rewrites that entry's whole block of fields: the values are kept, but quoting and line wrapping may change. Editing only the writing leaves the fields exactly as typed. Likewise, editing one item of a list on a component rewrites the list.
 - Deleting a media file is permanent; everything else can be undone. Undo history lasts until the editor is restarted.
