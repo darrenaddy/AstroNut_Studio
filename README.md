@@ -111,7 +111,23 @@ Keys and addresses are stored only in `.astronut/settings.json` on your machine 
 npm start -- /path/to/another/astro-site
 ```
 
-The project needs its own `node_modules` (run `npm install` in it first). Nothing is added to it: the editor injects its preview bridge only into the dev server it starts. The Design panel assumes Tailwind CSS; the Theme panel looks for an `@theme { … }` block in the project's CSS. Selecting, text editing, layers, source editing, pages, content and the assistant work with any Astro project.
+The project needs its own packages installed first, with whichever tool it uses (`npm install`, `pnpm install` …). Nothing is added to it: the editor injects its preview bridge only into the dev server it starts.
+
+What works depends on how the project is built:
+
+| | Works when |
+|---|---|
+| Selecting, layers, moving, duplicating, deleting, source editing, pages, the assistant | Any Astro project. Clicking in the preview relies on Astro marking each element with its source position; on Astro versions that leave the marks out, the editor adds its own. |
+| Editing text on the page | The text is written in the `.astro` file. Text a page passes to a component as a plain value (`<Hero tagline="Free" />`), or as a list of simple items, is edited as a field of that placement. Text from a slot, a content entry or a value computed in code is edited where it lives. |
+| Components and layouts | Any `.astro` file outside `src/pages`, wherever the project keeps it. |
+| Fonts | The project lists its fonts under `fonts` in its Astro config. Each one can be swapped, under the CSS variable the project gave it. |
+| Design panel | The project uses Tailwind CSS. Without it the style controls are switched off, since the classes they write would do nothing. |
+| Theme panel | The project's CSS defines the values each control edits (`--color-brand-500`, `--bg` and `--fg`, `--radius-card`). Controls for values it doesn't define are hidden. |
+| Content tab | Collections declared with `defineCollection` and a `glob` loader. Fields that hold a group or a list of groups are shown but edited in the file. |
+
+If the project's `dev` script does more than run `astro dev` (generating files first, for example), the editor says so: it starts Astro itself, so run that script once yourself if the preview reports a missing file.
+
+Tried on Astro's blog starter, [AstroWind](https://github.com/arthelokyo/astrowind) and [Astroplate](https://github.com/zeon-studio/astroplate), on Astro 7.1, 7.3 and 7.4. Earlier major versions of Astro have not been tried.
 
 Other settings: `PORT=4700 npm start` changes the editor's port.
 
