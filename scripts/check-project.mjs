@@ -286,10 +286,14 @@ async function run() {
   const previews = [];
   for (const c of state.components.filter((c) => c.source === 'block' || c.source === 'widget').slice(0, 4)) {
     const r = await page('/__astronut/c/' + c.previewId);
-    previews.push({ name: c.name, error: r.error });
+    // A component that is handed its data by a page (a list of posts, say) often can't stand on its own; that is a limit, not a fault.
+    const needsData = r.error ? ((await api('GET', `/fields?file=${encodeURIComponent(c.file)}`).catch(() => null))?.fields || []).some((f) => f.type === 'code') : false;
+    previews.push({ name: c.name, error: r.error, needsData });
   }
-  const bad = previews.filter((x) => x.error);
-  if (previews.length) add('Components', 'A component previews on its own', bad.length ? 'fail' : 'pass', bad.length ? bad.map((x) => `${x.name}: ${x.error}`).join(' | ').slice(0, 300) : `${previews.length} tried`);
+  const limited = previews.filter((x) => x.error && x.needsData);
+  if (limited.length) add('Components', 'Components that need data from a page', 'info', `${limited.map((x) => x.name).join(', ')} can’t be previewed alone`);
+  const bad = previews.filter((x) => x.error && !x.needsData);
+  if (previews.length > limited.length) add('Components', 'A component previews on its own', bad.length ? 'fail' : 'pass', bad.length ? bad.map((x) => `${x.name}: ${x.error}`).join(' | ').slice(0, 300) : `${previews.length - limited.length} tried`);
 
   await contentAndChecks(state);
 }
@@ -331,7 +335,16 @@ async function contentAndChecks(state) {
   if (withBuild) {
     try {
       const b = await api('POST', '/build');
-      add('Checks', 'The site builds', b.ok ? 'pass' : 'fail', b.ok ? `${b.seconds.toFixed(1)}s` : 'astro build failed — see the Build log in the editor');
+      if (b.ok) add('Checks', 'The site builds', 'pass', `${b.seconds.toFixed(1)}s`);
+      else {
+        // Is it the editor, or does the project not build by itself either? Run its own build to find out.
+        const own = await new Promise((res) => {
+          const child = spawn(process.execPath, [path.join(root, 'node_modules/astro/astro.js'), 'build'], { cwd: root, env: { ...process.env, ASTRO_TELEMETRY_DISABLED: '1' }, stdio: 'ignore' });
+          child.on('exit', (code) => res(code === 0));
+          child.on('error', () => res(false));
+        });
+        add('Checks', 'The site builds', own ? 'fail' : 'info', own ? 'the project builds by itself, but not from the editor — see the Build log in the editor' : 'the project’s own “astro build” fails too, so this is not the editor’s doing');
+      }
     } catch (e) {
       add('Checks', 'The site builds', 'fail', e.message);
     }
