@@ -80,6 +80,8 @@ input, textarea, select { user-select: text; }
 .right { border-left: 1px solid var(--line); }
 .center { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--canvas); }
 
+.left .logo { padding: 12px 14px; border-bottom: 1px solid var(--line); flex: none; }
+.left .logo img { display: block; width: 150px; max-width: 100%; height: auto; border-radius: 6px; }
 .tabs { display: flex; align-items: center; gap: 2px; padding: 8px 10px 0; height: 44px; border-bottom: 1px solid var(--line); flex: none; }
 .tabs .brand { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; margin-right: 4px; color: var(--fg); }
 .tabs .brand:hover { background: var(--hover); }

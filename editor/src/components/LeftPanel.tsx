@@ -13,6 +13,9 @@ export function LeftPanel() {
   const tab = useStore((s) => s.tab);
   return (
     <aside className="left">
+      <div className="logo">
+        <img src="/astronut-logo.webp" width={150} height={51} alt="AstroNut Studio" />
+      </div>
       <div className="tabs">
         <button className="brand tip down" data-tip="Go to the home page" onClick={() => act().navigate('/')}>
           <Home size={16} strokeWidth={2.4} />
