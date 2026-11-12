@@ -71,6 +71,14 @@ function FileTab() {
           </button>
         </div>
         <div className="scroll">
+          {!pages.length && (
+            <p className="note" style={{ margin: '4px 12px 10px' }}>
+              This project has no pages of its own in <code>src/pages</code>. Its pages are generated for it, usually from its content (documentation sites built with Starlight work this way).{' '}
+              <button style={{ textDecoration: 'underline' }} onClick={() => act().setTab('content')}>
+                Edit the content
+              </button>
+            </p>
+          )}
           {pages.map((p: any) => (
             <div key={p.file} className={'row' + (p.file === pageFile ? ' on' : '')} onClick={() => act().openPage(p)} title={p.file}>
               <File size={14} style={{ color: p.dynamic ? 'var(--dyn)' : 'var(--muted)', flex: 'none' }} />
