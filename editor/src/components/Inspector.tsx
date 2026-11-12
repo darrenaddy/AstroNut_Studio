@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowRight, ArrowUp, Code2, Component, Copy, CornerLeftUp, EyeOff, FileCode2, Image as ImageIcon, MoveDown, MoveUp, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
-import { useStore, act, BREAKPOINTS, EMPTY, SMART_IMAGE } from '../store';
+import { useStore, act, isLayoutFile, BREAKPOINTS, EMPTY, SMART_IMAGE } from '../store';
 import { api } from '../api';
 import * as tw from '../tw';
 import { Group, Modal, Popover, Seg, SelectField, TextField } from './ui';
@@ -84,7 +84,7 @@ function Head({ title, badge, purple }: { title: string; badge?: string; purple?
       </button>
       {foreign && sel.kind === 'element' && (
         <p className="note">
-          Part of the <b>{compName}</b> {sel.file.startsWith('src/layouts/') ? 'layout' : 'component'} — a change here shows up everywhere it is used.
+          Part of the <b>{compName}</b> {isLayoutFile(sel.file) ? 'layout' : 'component'} — a change here shows up everywhere it is used.
         </p>
       )}
       {info?.inExpr && sel.kind === 'element' && (
@@ -836,7 +836,7 @@ function ComponentPanel() {
   if (!info) return <div className="hint">Reading the source…</div>;
   const all = [...(data?.components || []), ...(data?.layouts || [])];
   const comp = all.find((c: any) => c.file === info.componentFile);
-  const isLayout = info.componentFile?.startsWith('src/layouts/');
+  const isLayout = isLayoutFile(info.componentFile);
   const widgetFields = (info.fields || []).filter((f: any) => f.type !== 'code');
   const fieldNames = new Set(widgetFields.map((f: any) => f.name));
   const props = info.attrs.filter((a: any) => a.name && !fieldNames.has(a.name));
@@ -1112,7 +1112,7 @@ function PagePanel() {
         <div className="insp-title">
           <span>{page ? page.name : pageFile ? pageFile.split('/').pop()!.replace('.astro', '') : 'Styles'}</span>
           {page && <span className="badge">page</span>}
-          {!page && pageFile && <span className="badge" style={{ color: 'var(--comp)', borderColor: 'var(--comp)' }}>{pageFile.startsWith('src/layouts') ? 'layout' : 'component'}</span>}
+          {!page && pageFile && <span className="badge" style={{ color: 'var(--comp)', borderColor: 'var(--comp)' }}>{isLayoutFile(pageFile) ? 'layout' : 'component'}</span>}
         </div>
         {pageFile && (
           <button className="filechip" onClick={() => useStore.setState({ codeFile: pageFile })} title="Open this file in the code editor">

@@ -37,6 +37,27 @@ function stampPlugin() {
   };
 }
 
+// The site-wide stylesheets a component needs when it is previewed on its own. Only the top-level ones:
+// a file that another stylesheet @imports is a part of that one, and often can't be loaded by itself.
+function stylesPlugin() {
+  const id = 'virtual:astronut-styles';
+  return {
+    name: 'astronut-styles',
+    resolveId: (x) => (x === id ? '\0' + id : null),
+    load(x) {
+      if (x !== '\0' + id) return null;
+      const files = [];
+      for (const dir of ['src/styles', 'src/assets/styles', 'src/css']) {
+        const abs = path.join(root, dir);
+        if (!fs.existsSync(abs)) continue;
+        for (const name of fs.readdirSync(abs)) if (name.endsWith('.css')) files.push({ name, url: `/${dir}/${name}`, text: fs.readFileSync(path.join(abs, name), 'utf8') });
+      }
+      const imported = (f) => files.some((o) => o !== f && new RegExp(`@import\\s+(?:url\\()?['"][^'"]*${f.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`).test(o.text));
+      return files.filter((f) => !imported(f)).map((f) => `import ${JSON.stringify(f.url)};`).join('\n') || 'export {};';
+    },
+  };
+}
+
 let base = '/';
 
 function bridge(stamp) {
@@ -48,7 +69,7 @@ function bridge(stamp) {
         injectScript('head-inline', fs.readFileSync(path.join(here, 'bridge.js'), 'utf8'));
         injectRoute({ pattern: '/__astronut/c/[id]', entrypoint: path.join(here, 'preview/component.astro'), prerender: true });
         injectRoute({ pattern: '/__astronut/probe', entrypoint: path.join(here, 'preview/probe.astro'), prerender: true });
-        updateConfig({ vite: { server: { fs: { allow: [here, root] } }, plugins: stamp ? [stampPlugin()] : [] } });
+        updateConfig({ vite: { server: { fs: { allow: [here, root] } }, plugins: [stylesPlugin(), ...(stamp ? [stampPlugin()] : [])] } });
       },
       'astro:config:done'({ config }) {
         base = config.base || '/';

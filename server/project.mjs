@@ -230,10 +230,11 @@ export class Project {
 
   components() {
     const { usedOn, usedBy } = this.usage();
-    const map = (dir, kind) =>
-      this.walk(dir, (n) => n.endsWith('.astro')).map((file) => {
-        const relToDir = file.slice(dir.length + 1);
-        const parts = relToDir.split('/');
+    // Every .astro file that isn't a page is a component or a layout, wherever the project keeps it.
+    const all = this.walk('src', (n) => n.endsWith('.astro')).filter((f) => !f.startsWith('src/pages/'));
+    const map = (kind) =>
+      all.filter((file) => (isLayoutPath(file) || /<html[\s>]/i.test(this.readOr(file, '')) ? 'layout' : 'component') === kind).map((file) => {
+        const parts = file.replace(/^src\/(components\/|layouts\/)?/, '').split('/');
         const src = this.readOr(file, '');
         let fields = [];
         try {
@@ -259,7 +260,7 @@ export class Project {
           previewId: file.replace(/^src\//, '').replace(/\.astro$/, '').split('/').join('~'),
         };
       });
-    return { components: map('src/components', 'component'), layouts: map('src/layouts', 'layout') };
+    return { components: map('component'), layouts: map('layout') };
   }
   media() {
     const item = (file, url, optimised) => {
@@ -456,7 +457,7 @@ export class Project {
       }
       if (node.type !== 'element') return {};
       const own = W.parseFields(doc.src);
-      const kinds = /^src\/(components|layouts)\//.test(file) ? W.fieldKindsFor(doc, node) : [];
+      const kinds = !file.startsWith('src/pages/') ? W.fieldKindsFor(doc, node) : [];
       const taken = new Set(own.fields.map((f) => f.name));
       return {
         field: W.fieldOfNode(doc, node, own.fields),
@@ -1099,6 +1100,13 @@ export class Project {
     };
   }
 }
+
+/**
+ * A layout by where it is kept: in src/layouts, but not in one of the sub-folders projects use there
+ * for the pieces layouts are built from (Astroplate keeps its components in src/layouts/components).
+ * The preview route in preview/component.astro applies the same rule.
+ */
+const isLayoutPath = (file) => /^src\/layouts\//.test(file) && !/\/(components|partials|parts|helpers|widgets|ui|shortcodes|elements|blocks|sections)\//.test(file);
 
 function safe(fn, fallback) {
   try {

@@ -2,18 +2,19 @@
 // Renders a single component or layout on its own, for the editor's canvas.
 // This file lives in the editor, not in your site — it is only routed in dev.
 export function getStaticPaths() {
-  const files = import.meta.glob('/src/{components,layouts}/**/*.astro');
+  const files = import.meta.glob(['/src/**/*.astro', '!/src/pages/**']);
   return Object.keys(files).map((key) => ({
     params: { id: key.replace(/^\/src\//, '').replace(/\.astro$/, '').split('/').join('~') },
   }));
 }
-import.meta.glob('/src/styles/*.css', { eager: true });
-const files = import.meta.glob('/src/{components,layouts}/**/*.astro');
+import 'virtual:astronut-styles';
+const files = import.meta.glob(['/src/**/*.astro', '!/src/pages/**']);
 const { id } = Astro.params;
 const key = '/src/' + String(id).split('~').join('/') + '.astro';
 const mod = files[key] ? await files[key]() : null;
 const Comp = mod?.default;
-const isLayout = key.startsWith('/src/layouts/');
+// The same rule as isLayoutPath in project.mjs: src/layouts, minus the folders that hold a layout's pieces.
+const isLayout = key.startsWith('/src/layouts/') && !/\/(components|partials|parts|helpers|widgets|ui|shortcodes|elements|blocks|sections)\//.test(key);
 
 // Some components can't render without data — a blog card needs a post, for
 // example. Lend them the first entry of each content collection under the usual

@@ -118,6 +118,8 @@ const cmd = (type: string, data: any = {}) => iframe?.contentWindow?.postMessage
 
 let opChain: Promise<any> = Promise.resolve();
 export const SMART_IMAGE = 'src/components/media/SmartImage.astro';
+/** Whether a file is one of the project's layouts (the server decides; they need not live in src/layouts). */
+export const isLayoutFile = (file?: string | null) => !!file && (useStore.getState().data?.layouts || []).some((l: any) => l.file === file);
 let readyCount = 0;
 let pendingField: any = null;
 let retries = 0;
@@ -645,7 +647,7 @@ export const useStore = create<State>((set, get) => {
       const { pageFile, selection: s, data: d } = get();
       if (!pageFile) return;
       const isPage = d.pages.some((p: any) => p.file === pageFile);
-      if (!isPage && !pageFile.startsWith('src/layouts/')) return actions.toast('Open a page first — blocks are added to pages.', 'info');
+      if (!isPage && !isLayoutFile(pageFile)) return actions.toast('Open a page first — blocks are added to pages.', 'info');
       if (data.component === pageFile) return actions.toast('A component can’t contain itself.', 'error');
       const o: any = { type: 'insert', file: pageFile, component: data.component, withSlot: !!data.hasSlot, pageLevel: true, copy: !!data.copy };
       if (dropRef) o.dropRef = { ...dropRef, file: rel(dropRef.file) };
