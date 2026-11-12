@@ -136,9 +136,12 @@ The check described below passes on these projects, with every edit it makes und
 | The bundled starter, Astro's blog, portfolio and React starters, [AstroPaper](https://github.com/satnaing/astro-paper) | 7.4 |
 | [AstroWind](https://github.com/arthelokyo/astrowind) | 7.3 |
 | [Astroplate](https://github.com/zeon-studio/astroplate) | 7.1 |
+| [Bookworm Light](https://github.com/themefisher/bookworm-light-astro), [Northendlab Light](https://github.com/themefisher/northendlab-light-astro), [Hydrogen](https://github.com/statichunt/hydrogen-astro) | 7.0 |
 | AstroPaper 5.5 | 5.16 |
-| AstroPaper 4.8 (Tailwind 3) | 4.16 |
+| AstroPaper 4.8, [Astrofy](https://github.com/manuelernestog/astrofy), [Stablo](https://github.com/web3templates/stablo-astro) (all Tailwind 3) | 4.16 |
 | Astro's Starlight starter (content and checks only) | 7.4 |
+
+Astrofy and Stablo do not build as downloaded, with or without the editor; everything else in the check passes on them.
 
 That check drives the editor's server, not a browser. The blog starter, AstroWind and Astroplate were also used by hand in the editor; the rest were not, and Astro 6 has not been tried at all.
 
@@ -172,6 +175,7 @@ The trick that makes visual editing possible: in dev mode Astro stamps every ren
 ## Good to know
 
 - Elements produced by code — the body of a `.map()` loop, or something inside `{condition && …}` — can be restyled, but not moved, duplicated or deleted visually. Use the Source tab or the assistant for those.
+- A component that is handed its data by a page (a list of posts it expects to be filtered already, say) may not preview on its own. It can still be edited where it appears on a page.
 - Editing an element that lives in a component changes that component everywhere it is used. The inspector tells you when that is the case.
 - Changing a field of a content entry rewrites that entry's whole block of fields: the values are kept, but quoting and line wrapping may change. Editing only the writing leaves the fields exactly as typed. Likewise, editing one item of a list on a component rewrites the list.
 - Deleting a media file is permanent; everything else can be undone. Undo history lasts until the editor is restarted.
